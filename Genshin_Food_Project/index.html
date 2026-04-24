@@ -40,13 +40,14 @@
             position: sticky;
             top: 20px;
         }
-        .side-img { width: 100%; border-radius: 8px; margin-bottom: 10px; }
+        .side-img { width: 100%; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee; }
 
         /* 表單與卡片 */
         .form-box { 
             background: white; padding: 20px; border-radius: 12px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 30px; 
         }
+        .form-box h3 { border-bottom: 2px solid #d3a056; padding-bottom: 10px; }
         .form-box input, .form-box select, .form-box textarea { width: 100%; margin: 5px 0 15px; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }
         
         #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
@@ -86,36 +87,39 @@
 
         <div class="content-right">
             <h4 style="margin-top:0; color:#84643a;">今日推薦</h4>
-            <img src="https://api.paugram.com/wallpaper/?source=gt" class="side-img" alt="插圖">
+            <img src="https://api.paugram.com/wallpaper/?source=gt" class="side-img" alt="推薦插圖">
             <p style="font-size: 13px; color: #666;">「即便在旅途中，也不要忘記品嚐美食喔！」</p>
             <div style="border-top: 1px dashed #ccc; margin: 15px 0;"></div>
-            <p style="font-size: 12px; color: #999;">旅行者專屬筆記本</p>
+            <p style="font-size: 12px; color: #999;">旅行者專屬美食筆記</p>
         </div>
     </div>
 
     <script>
-        // 自動判斷是在本地還是 GitHub Pages
+        // 自動判斷是在本地開發還是 GitHub Pages 線上版
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         
-        // 如果不是本地，就隱藏新增功能（因為 Pages 無法直接寫入檔案）
+        // 線上版隱藏表單，因為 Pages 無法寫入檔案，只能讀取
         if (!isLocal) {
             document.getElementById('adminBox').style.display = 'none';
         }
 
         async function upload() {
+            const name = document.getElementById('name').value;
             const fileInput = document.getElementById('image');
-            if(!document.getElementById('name').value || !fileInput.files[0]) {
-                return alert('名稱跟圖片都要有喔！');
-            }
+            if(!name || !fileInput.files[0]) return alert('名稱跟圖片都要有喔！');
 
             const formData = new FormData();
-            formData.append('name', document.getElementById('name').value);
+            formData.append('name', name);
             formData.append('category', document.getElementById('category').value);
             formData.append('intro', document.getElementById('intro').value);
             formData.append('foodImage', fileInput.files[0]);
 
-            await fetch('/add-food', { method: 'POST', body: formData });
-            location.reload();
+            try {
+                await fetch('/add-food', { method: 'POST', body: formData });
+                location.reload();
+            } catch (err) {
+                alert('上傳失敗，請確認本地伺服器是否開啟');
+            }
         }
 
         async function remove(id) {
@@ -129,23 +133,34 @@
         }
 
         async function load() {
-            // 重要：改為讀取同目錄下的 data.json，GitHub Pages 才能顯示
-            const res = await fetch('data.json');
-            const data = await res.json();
-            const area = document.getElementById('displayArea');
-            
-            data.forEach(item => {
-                area.innerHTML += `
-                    <div class="food-card">
-                        ${isLocal ? `<button class="delete-btn" onclick="remove(${item.id})">刪除</button>` : ''}
-                        <img src="${item.image}" onerror="this.src='https://via.placeholder.com/70?text=Food'">
-                        <div class="food-info">
-                            <span class="category-tag">${item.category}</span>
-                            <strong>${item.name}</strong>
-                            <p>${item.intro || '尚未加入介紹'}</p>
-                        </div>
-                    </div>`;
-            });
+            try {
+                // 這裡是搬家的重點：直接抓取同目錄下的 data.json
+                const res = await fetch('data.json');
+                const data = await res.json();
+                const area = document.getElementById('displayArea');
+                area.innerHTML = '';
+                
+                data.forEach(item => {
+                    // 修正搬家後的圖片路徑邏輯
+                    let imgPath = item.image;
+                    if (imgPath.startsWith('public/')) {
+                        imgPath = imgPath.replace('public/', '');
+                    }
+
+                    area.innerHTML += `
+                        <div class="food-card">
+                            ${isLocal ? `<button class="delete-btn" onclick="remove(${item.id})">刪除</button>` : ''}
+                            <img src="${imgPath}" onerror="this.src='https://via.placeholder.com/70?text=Food'">
+                            <div class="food-info">
+                                <span class="category-tag">${item.category}</span>
+                                <strong>${item.name}</strong>
+                                <p>${item.intro || '尚未加入介紹'}</p>
+                            </div>
+                        </div>`;
+                });
+            } catch (err) {
+                console.error("載入資料失敗:", err);
+            }
         }
         load();
     </script>
