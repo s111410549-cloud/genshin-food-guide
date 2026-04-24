@@ -2,111 +2,86 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>提瓦特美食札記 - 玩家自定義版</title>
+    <title>提瓦特美食札記 - 雲端同步版</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f4f1e9; margin: 0; display: flex; flex-direction: column; align-items: center; }
         header { width: 100%; text-align: center; padding: 20px; color: #84643a; font-size: 24px; font-weight: bold; }
-        
-        /* 表單樣式 */
-        .form-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 90%; max-width: 500px; margin-bottom: 30px; }
-        .form-group { margin-bottom: 15px; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button.save-btn { width: 100%; padding: 12px; background-color: #d4a373; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button.save-btn:hover { background-color: #bc8a5f; }
 
-        /* 卡片佈局 */
-        #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; width: 90%; max-width: 1200px; padding-bottom: 50px; }
-        .food-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; display: flex; gap: 15px; align-items: center; }
-        .food-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
-        .food-info { flex: 1; }
-        .category-tag { background: #f0e6d2; color: #84643a; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 5px; display: inline-block; }
-        .delete-btn { position: absolute; top: 10px; right: 10px; background: #ff5e5e; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 12px; }
+        /* 主容器佈局 */
+        .main-container { display: flex; width: 95%; max-width: 1200px; gap: 20px; align-items: flex-start; }
+
+        /* 左側與中間：上傳區 */
+        .input-section { flex: 2; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
+        
+        /* 右側：自訂插圖紅框區 */
+        .sidebar-art { flex: 1; border: 3px dashed #ff5e5e; border-radius: 20px; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff5f5; cursor: pointer; overflow: hidden; position: relative; }
+        .sidebar-art img { width: 100%; height: 100%; object-fit: cover; }
+        .sidebar-art:hover::after { content: "點擊更換插圖"; position: absolute; background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; }
+
+        /* 下方：藍框料理展示區 */
+        #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; width: 95%; margin-top: 30px; padding-bottom: 50px; }
+        .food-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; display: flex; gap: 15px; align-items: center; border-left: 5px solid #d4a373; }
+        .food-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+        .category-tag { position: absolute; top: 10px; left: 110px; background: #f0e6d2; color: #84643a; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+        .delete-btn { position: absolute; top: 10px; right: 10px; background: #ff5e5e; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+
+        /* 輸入框美化 */
+        input, select, textarea { width: 100%; margin-bottom: 15px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+        .save-btn { width: 100%; padding: 15px; background: #d4a373; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <header>🍴 提瓦特美食札記</header>
 
-<div class="form-container">
-    <div class="form-group"><input type="text" id="name" placeholder="料理名稱"></div>
-    <div class="form-group">
+<div class="main-container">
+    <div class="input-section">
+        <input type="text" id="name" placeholder="料理名稱">
         <select id="category">
             <option value="主食">主食</option>
             <option value="飲品">飲品</option>
             <option value="點心">點心</option>
         </select>
+        <textarea id="intro" rows="3" placeholder="簡單介紹一下這道美食..."></textarea>
+        <input type="file" id="imageInput" accept="image/*">
+        <button class="save-btn" onclick="uploadToCloud()">存入雲端圖鑑</button>
     </div>
-    <div class="form-group"><textarea id="intro" placeholder="簡單介紹一下..."></textarea></div>
-    <div class="form-group"><input type="file" id="image" accept="image/*"></div>
-    <button class="save-btn" onclick="addFood()">存入圖鑑</button>
+
+    <div class="sidebar-art" onclick="document.getElementById('bgInput').click()">
+        <input type="file" id="bgInput" style="display:none" accept="image/*" onchange="changeBg(this)">
+        <div id="bgPlaceholder">點擊上傳自定義插圖</div>
+        <img id="sideImg" style="display:none">
+    </div>
 </div>
 
-<div id="displayArea"></div>
+<div id="displayArea">
+    </div>
 
 <script>
-    // 1. 初始化資料：先看瀏覽器有沒有存過的資料，沒有就用空的
-    let foods = JSON.parse(localStorage.getItem('genshin_foods')) || [];
-
-    // 2. 渲染畫面函數
-    function render() {
-        const container = document.getElementById('displayArea');
-        container.innerHTML = '';
-        foods.forEach((item, index) => {
-            container.innerHTML += `
-                <div class="food-card">
-                    <button class="delete-btn" onclick="removeFood(${index})">刪除</button>
-                    <img src="${item.imgSrc}">
-                    <div class="food-info">
-                        <span class="category-tag">${item.category}</span><br>
-                        <strong>${item.name}</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 13px; color: #666;">${item.intro}</p>
-                    </div>
-                </div>`;
-        });
-    }
-
-    // 3. 新增料理
-    function addFood() {
-        const name = document.getElementById('name').value;
-        const category = document.getElementById('category').value;
-        const intro = document.getElementById('intro').value;
-        const file = document.getElementById('image').files[0];
-
-        if (!name || !file) return alert("名稱跟圖片都要有喔！");
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const newFood = {
-                name: name,
-                category: category,
-                intro: intro,
-                imgSrc: e.target.result // 圖片轉成 Base64 字串
+    // 這裡未來需要串接 Firebase 才能達成「不同人登入都能看到」
+    // 目前先以 LocalStorage 確保你在自己電腦測試時「重新整理不消失」
+    
+    function changeBg(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('sideImg').src = e.target.result;
+                document.getElementById('sideImg').style.display = 'block';
+                document.getElementById('bgPlaceholder').style.display = 'none';
+                localStorage.setItem('custom_bg', e.target.result);
             };
-            foods.push(newFood);
-            saveAndRefresh();
-            // 清空輸入框
-            document.getElementById('name').value = '';
-            document.getElementById('intro').value = '';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    // 4. 刪除料理
-    function removeFood(index) {
-        if (confirm("確定要刪除這道料理嗎？")) {
-            foods.splice(index, 1);
-            saveAndRefresh();
+            reader.readAsDataURL(input.files[0]);
         }
     }
 
-    // 5. 儲存到 LocalStorage 並更新畫面
-    function saveAndRefresh() {
-        localStorage.setItem('genshin_foods', JSON.stringify(foods));
-        render();
+    // 初始化背景
+    if(localStorage.getItem('custom_bg')) {
+        document.getElementById('sideImg').src = localStorage.getItem('custom_bg');
+        document.getElementById('sideImg').style.display = 'block';
+        document.getElementById('bgPlaceholder').style.display = 'none';
     }
 
-    // 頁面開啟時先畫一次
-    render();
+    // 更多同步邏輯... (需要 Firebase 帳號)
 </script>
 
 </body>
