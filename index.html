@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>提瓦特美食札記 - 雲端同步版</title>
+    <title>提瓦特美食札記 - 雲端網址版</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f4f1e9; margin: 0; display: flex; flex-direction: column; align-items: center; }
         header { width: 100%; text-align: center; padding: 20px; color: #84643a; font-size: 24px; font-weight: bold; }
@@ -14,10 +14,9 @@
         .save-btn { width: 100%; padding: 15px; background: #d4a373; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
 
         /* 右側紅框：自訂插圖區 */
-        .sidebar-art { flex: 1; border: 3px dashed #ff5e5e; border-radius: 15px; min-height: 350px; background: #fff5f5; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative; }
-        .sidebar-art img { width: 100%; height: 100%; object-fit: cover; }
-        .sidebar-art:hover::after { content: "更換插圖"; position: absolute; background: rgba(0,0,0,0.5); color: white; padding: 10px; border-radius: 5px; }
-
+        .sidebar-art { flex: 1; border: 3px dashed #ff5e5e; border-radius: 15px; min-height: 350px; background: #fff5f5; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative; padding: 10px; }
+        .sidebar-art img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+        
         /* 下方藍框：料理展示區 */
         #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; width: 95%; max-width: 1200px; padding-bottom: 50px; }
         .food-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; display: flex; gap: 15px; border-left: 6px solid #d4a373; }
@@ -29,7 +28,7 @@
 </head>
 <body>
 
-<header>🍴 提瓦特美食札記 (雲端版)</header>
+<header>🍴 提瓦特美食札記 (雲端網址版)</header>
 
 <div class="main-container">
     <div class="form-container">
@@ -40,14 +39,16 @@
             <option value="點心">點心</option>
         </select>
         <textarea id="intro" rows="3" placeholder="介紹一下這道美食..."></textarea>
-        <input type="file" id="foodImgInput" accept="image/*">
+        <input type="text" id="foodImgUrl" placeholder="請貼上料理圖片網址 (URL)">
         <button class="save-btn" id="uploadBtn">存入雲端圖鑑</button>
     </div>
 
-    <div class="sidebar-art" onclick="document.getElementById('bgInput').click()">
-        <input type="file" id="bgInput" style="display:none" accept="image/*">
-        <img id="bgDisplay" src="" style="display:none">
-        <div id="bgText">點擊上傳自訂插圖 (紅框區)</div>
+    <div class="sidebar-art">
+        <div id="bgBox" style="width:100%; height:100%; display: flex; flex-direction: column; align-items: center;">
+            <img id="bgDisplay" src="" style="display:none">
+            <div id="bgText" style="text-align: center; color: #ff5e5e; margin-bottom: 10px;">右側插圖網址：</div>
+            <input type="text" id="bgInputUrl" placeholder="貼上插圖網址後按 Enter" style="font-size: 12px;">
+        </div>
     </div>
 </div>
 
@@ -56,9 +57,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // 你的配置
+    // 你的 Firebase 配置 (維持原樣)
     const firebaseConfig = {
         apiKey: "AIzaSyCObKMkSnYZip04WBNyPC5gIDabK2VYevE",
         authDomain: "genshin-food-cloud.firebaseapp.com",
@@ -70,11 +70,10 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
-    // 1. 處理右側紅框背景圖 (讀取與更新)
+    // 1. 處理右側紅框背景圖 (透過網址更新)
     const bgDisplay = document.getElementById('bgDisplay');
-    const bgText = document.getElementById('bgText');
+    const bgInputUrl = document.getElementById('bgInputUrl');
 
     async function loadBg() {
         const docRef = doc(db, "settings", "background");
@@ -82,20 +81,18 @@
         if (docSnap.exists()) {
             bgDisplay.src = docSnap.data().url;
             bgDisplay.style.display = 'block';
-            bgText.style.display = 'none';
         }
     }
     loadBg();
 
-    document.getElementById('bgInput').onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const sRef = ref(storage, 'background/main_bg');
-        await uploadBytes(sRef, file);
-        const url = await getDownloadURL(sRef);
-        await setDoc(doc(db, "settings", "background"), { url: url });
-        location.reload(); 
-    };
+    bgInputUrl.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            const url = bgInputUrl.value;
+            if(!url) return;
+            await setDoc(doc(db, "settings", "background"), { url: url });
+            location.reload();
+        }
+    });
 
     // 2. 顯示料理清單 (即時同步)
     onSnapshot(collection(db, "foods"), (snapshot) => {
@@ -105,7 +102,7 @@
             const data = doc.data();
             area.innerHTML += `
                 <div class="food-card">
-                    <img src="${data.image}">
+                    <img src="${data.image}" onerror="this.src='https://via.placeholder.com/90?text=Error'">
                     <div class="food-info">
                         <button class="delete-btn" onclick="deleteFood('${doc.id}')">刪除</button>
                         <span class="category-tag">${data.category}</span><br>
@@ -116,29 +113,27 @@
         });
     });
 
-    // 3. 上傳新料理
+    // 3. 上傳新料理 (直接存網址)
     document.getElementById('uploadBtn').onclick = async () => {
         const name = document.getElementById('name').value;
         const category = document.getElementById('category').value;
         const intro = document.getElementById('intro').value;
-        const file = document.getElementById('foodImgInput').files[0];
+        const imgUrl = document.getElementById('foodImgUrl').value;
 
-        if (!name || !file) return alert("請填寫名稱並選取圖片！");
+        if (!name || !imgUrl) return alert("請填寫名稱並貼上圖片網址！");
 
-        document.getElementById('uploadBtn').innerText = "上傳中...";
-        const sRef = ref(storage, `foods/${Date.now()}_${file.name}`);
-        await uploadBytes(sRef, file);
-        const url = await getDownloadURL(sRef);
-
-        await addDoc(collection(db, "foods"), {
-            name, category, intro, image: url, createdAt: Date.now()
-        });
-
-        alert("存入雲端成功！");
-        location.reload();
+        document.getElementById('uploadBtn').innerText = "儲存中...";
+        try {
+            await addDoc(collection(db, "foods"), {
+                name, category, intro, image: imgUrl, createdAt: Date.now()
+            });
+            alert("存入雲端成功！");
+            location.reload();
+        } catch (e) {
+            alert("儲存失敗，請檢查 Firestore 規則！");
+        }
     };
 
-    // 4. 刪除功能掛載到 window
     window.deleteFood = async (id) => {
         if (confirm("確定要刪除這道美食嗎？")) {
             await deleteDoc(doc(db, "foods", id));
