@@ -11,6 +11,7 @@
             display: flex; flex-direction: column; align-items: center; color: #4a3e2e;
             background-image: radial-gradient(#d4a373 0.5px, transparent 0.5px);
             background-size: 24px 24px;
+            overflow-x: hidden; /* 防止粒子導致捲軸出現 */
         }
         
         header { 
@@ -19,24 +20,26 @@
             text-shadow: 2px 2px 0px rgba(255,255,255,0.8);
         }
 
-        /* 裝飾貼紙修正：如果圖片失效就隱藏 */
+        /* 裝飾貼紙修正 */
         .deco-sticker {
             position: absolute; pointer-events: none;
             filter: drop-shadow(3px 3px 2px rgba(0,0,0,0.1));
             z-index: 5; opacity: 0.9;
         }
-        img:not([src]), img[src=""] { opacity: 0; } /* 隱藏沒路徑的圖 */
-        img:error { display: none !important; } /* 隱藏失效的圖 */
+        /* 💡 隱藏破圖：沒網址就不顯示 */
+        img:not([src]), img[src=""], img[src*="undefined"] { opacity: 0 !important; }
 
         .main-container { position: relative; width: 90%; max-width: 1000px; z-index: 1; }
 
         /* 上方拍立得展示區 */
-        .gallery-container { display: flex; justify-content: center; gap: 25px; padding: 30px 0; perspective: 1000px; }
+        .gallery-container { display: flex; justify(content): center; gap: 25px; padding: 30px 0; perspective: 1000px; }
         .gallery-item { 
             flex: 0 1 280px; background: white; padding: 10px 10px 35px 10px;
             box-shadow: 5px 10px 20px rgba(0,0,0,0.1);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 1px solid #e8e4d8;
+            /* 💡 鼠標變叉子 */
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px'><text y='24'>🍴</text></svg>"), auto;
         }
         .gallery-item:nth-child(1) { transform: rotate(-4deg) translateY(10px); }
         .gallery-item:nth-child(2) { transform: rotate(2deg) translateY(-5px); z-index: 2; }
@@ -73,14 +76,20 @@
             background: white; border-radius: 20px; overflow: hidden; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
             transition: all 0.3s; border: 1px solid rgba(212, 163, 115, 0.1); height: 100%;
+            /* 💡 鼠標變叉子 */
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px'><text y='24'>🍴</text></svg>"), auto;
         }
         .food-card:hover { transform: translateY(-8px); box-shadow: 0 12px 30px rgba(0,0,0,0.1); }
         .food-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
         .food-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        
+        /* 讓按鈕跟選單維持原本的點擊手勢，不然會變叉子很奇怪 */
+        .delete-btn, select, input, textarea, .save-btn { cursor: pointer !important; }
+
         .category-tag { background: #f0e6d2; color: #84643a; padding: 3px 12px; border-radius: 50px; font-size: 11px; font-weight: bold; margin-bottom: 10px; align-self: flex-start; }
         .food-name { font-size: 20px; font-weight: bold; color: #5d4037; margin: 5px 0; }
         .food-intro { font-size: 13px; color: #7d6b5d; line-height: 1.6; margin-bottom: 15px; flex-grow: 1; }
-        .delete-btn { background: #ff5e5e; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; align-self: flex-end; }
+        .delete-btn { background: #ff5e5e; color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; align-self: flex-end; }
     </style>
 </head>
 <body>
@@ -167,7 +176,6 @@
         }
     };
 
-    // 💡 核心功能：監聽篩選選單並渲染
     let allFoods = [];
     const q = query(collection(db, "foods"), orderBy("createdAt", "desc"));
     
@@ -213,6 +221,28 @@
     window.deleteFood = async (id) => {
         if (confirm("要撕掉這頁紀錄嗎？")) await deleteDoc(doc(db, "foods", id)); 
     };
+
+    // 💡 香氣粒子 JS 效果
+    document.addEventListener('mousemove', function(e) {
+        if (Math.random() > 0.9) { 
+            const particle = document.createElement('div');
+            particle.innerHTML = '✨';
+            particle.style.position = 'fixed';
+            particle.style.left = e.clientX + 'px';
+            particle.style.top = e.clientY + 'px';
+            particle.style.pointerEvents = 'none';
+            particle.style.fontSize = '12px';
+            particle.style.color = '#d4a373';
+            particle.style.zIndex = '9999';
+            particle.style.transition = 'all 1s ease-out';
+            document.body.appendChild(particle);
+            setTimeout(() => {
+                particle.style.transform = `translateY(-50px) rotate(${Math.random() * 360}deg)`;
+                particle.style.opacity = '0';
+            }, 10);
+            setTimeout(() => { particle.remove(); }, 1000);
+        }
+    });
 </script>
 </body>
 </html>
