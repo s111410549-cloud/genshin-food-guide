@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>提瓦特美食札記 - 手帳版</title>
+    <title>提瓦特美食札記 - 看板娘互動版</title>
     <style>
         body { 
             font-family: "Microsoft JhengHei", sans-serif; 
@@ -20,6 +20,65 @@
             cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px'><text y='24'>🍴</text></svg>"), auto;
         }
 
+        /* 💡 看板娘對話框樣式 */
+        .gallery-container { display: flex; justify-content: center; gap: 30px; padding: 40px 0; }
+        
+        .gallery-item { 
+            position: relative; /* 讓對話框能定位在照片旁 */
+            background: white; padding: 10px 10px 35px 10px;
+            box-shadow: 5px 10px 20px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid #e8e4d8;
+            width: 200px;
+        }
+
+        /* 個別旋轉角度保持物理感 */
+        .gallery-item:nth-child(1) { transform: rotate(-4deg); }
+        .gallery-item:nth-child(2) { transform: rotate(2deg); }
+        .gallery-item:nth-child(3) { transform: rotate(-2deg); }
+        .gallery-item:hover { transform: scale(1.1) rotate(0deg); z-index: 100; }
+
+        .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+
+        /* 對話氣泡核心設計 */
+        .bubble {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.8);
+            background: #fffdf7;
+            border: 1.5px solid #d4a373;
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-size: 13px;
+            color: #84643a;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+            z-index: 110;
+        }
+        /* 氣泡小尾巴 */
+        .bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: #d4a373 transparent transparent;
+        }
+
+        /* 移上去顯示氣泡 */
+        .gallery-item:hover .bubble {
+            opacity: 1;
+            top: -60px;
+            transform: translateX(-50%) scale(1);
+        }
+
+        /* 下方卡片原有樣式 */
         .filter-box {
             margin-bottom: 30px; background: white; padding: 10px 25px; border-radius: 50px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #d4a373;
@@ -30,49 +89,28 @@
             gap: 40px; width: 90%; max-width: 1100px; padding-bottom: 100px;
         }
 
-        /* 💡 玩法：照片物理擺放感 */
         .food-card { 
             background: white; border-radius: 5px; overflow: hidden; 
             box-shadow: 2px 5px 15px rgba(0,0,0,0.08); 
             display: flex; flex-direction: column;
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 1px solid #e8e4d8;
-            padding: 12px 12px 0 12px; /* 像拍立得一樣留邊 */
+            padding: 12px 12px 0 12px;
         }
 
-        /* 讓偶數和奇數卡片有不同的初始傾斜 */
         .food-card:nth-child(odd) { transform: rotate(-1.5deg); }
         .food-card:nth-child(even) { transform: rotate(1.5deg); }
 
-        .food-card:hover { 
-            transform: rotate(0deg) translateY(-10px) scale(1.05); /* 移上去擺正並浮起 */
-            z-index: 10;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        }
-
+        .food-card:hover { transform: rotate(0deg) translateY(-10px) scale(1.05); z-index: 10; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
         .food-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; }
 
-        /* 💡 玩法：手寫內容動態展開 */
-        .food-content { 
-            padding: 15px 5px;
-            max-height: 50px; /* 初始只看得到標題 */
-            transition: max-height 0.5s ease-in-out;
-            overflow: hidden;
-            background: white;
-        }
-
-        .food-card:hover .food-content {
-            max-height: 300px; /* 移上去展開全文 */
-        }
-
+        .food-content { padding: 15px 5px; max-height: 50px; transition: max-height 0.5s ease-in-out; overflow: hidden; background: white; }
+        .food-card:hover .food-content { max-height: 300px; }
         .food-name { font-size: 18px; font-weight: bold; color: #5d4037; border-bottom: 1px dashed #d4a373; padding-bottom: 5px; }
         .food-intro { font-size: 14px; color: #7d6b5d; line-height: 1.6; padding-top: 10px; margin: 0; opacity: 0; transition: 0.3s; }
-        
         .food-card:hover .food-intro { opacity: 1; }
-
         .category-tag { font-size: 11px; color: #84643a; font-weight: bold; }
-        
-        /* 管理員表單 */
+
         .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 300px;}
         input, select, textarea { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
     </style>
@@ -80,6 +118,21 @@
 <body>
 
 <header>🍴 提瓦特美食札記</header>
+
+<div class="gallery-container">
+    <div class="gallery-item">
+        <div class="bubble">可以給派蒙分一口嗎？嘿嘿</div>
+        <img id="img1" src="https://via.placeholder.com/400x400?text=Wait...">
+    </div>
+    <div class="gallery-item">
+        <div class="bubble">甜點...是不可或缺的。</div>
+        <img id="img2" src="https://via.placeholder.com/400x400?text=Wait...">
+    </div>
+    <div class="gallery-item">
+        <div class="bubble">今天也要好好吃飯喔！</div>
+        <img id="img3" src="https://via.placeholder.com/400x400?text=Wait...">
+    </div>
+</div>
 
 <div class="filter-box">
     <label>🔍 翻閱品項：</label>
@@ -103,7 +156,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCObKMkSnYZip04WBNyPC5gIDabK2VYevE",
@@ -119,8 +172,19 @@
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    let allFoods = [];
+    // 載入封面圖 (派蒙、將軍等)
+    async function loadGallery() {
+        const docSnap = await getDoc(doc(db, "settings", "gallery"));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if(data.url1) document.getElementById('img1').src = data.url1;
+            if(data.url2) document.getElementById('img2').src = data.url2;
+            if(data.url3) document.getElementById('img3').src = data.url3;
+        }
+    }
+    loadGallery();
 
+    let allFoods = [];
     onSnapshot(query(collection(db, "foods"), orderBy("createdAt", "desc")), (snapshot) => {
         allFoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderFoods(document.getElementById('filterCategory').value);
@@ -130,7 +194,6 @@
         const area = document.getElementById('displayArea');
         area.innerHTML = '';
         const list = filter === "全部" ? allFoods : allFoods.filter(f => f.category === filter);
-        
         list.forEach(f => {
             area.innerHTML += `
                 <div class="food-card">
@@ -160,12 +223,11 @@
 
     window.deleteFood = async (id) => { if(confirm("確定撕掉？")) await deleteDoc(doc(db,"foods",id)); };
 
-    // ✨ 香氣粒子保留
     document.addEventListener('mousemove', (e) => {
         if (Math.random() > 0.9) {
             const p = document.createElement('div');
             p.innerHTML = '✨'; p.style.position = 'fixed'; p.style.left = e.clientX + 'px'; p.style.top = e.clientY + 'px';
-            p.style.pointerEvents = 'none'; p.style.color = '#d4a373'; p.style.fontSize = '10px'; p.style.zIndex = '100';
+            p.style.pointerEvents = 'none'; p.style.color = '#d4a373'; p.style.fontSize = '10px'; p.style.zIndex = '200';
             document.body.appendChild(p);
             setTimeout(() => { p.style.transition = '1s'; p.style.transform = 'translateY(-40px)'; p.style.opacity = '0'; }, 10);
             setTimeout(() => p.remove(), 1000);
