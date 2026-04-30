@@ -49,11 +49,12 @@
 
 ---
 
-## 🔗 四、 網址連結
+## 
+四、 網址連結
 * **瀏覽者網址**：[點此開啟](https://s111410549-cloud.github.io/genshin-food-guide/)
 * **管理者網址**：[點此開啟管理模式](https://s111410549-cloud.github.io/genshin-food-guide/?mode=admin)
 
 ---
 
-## ⚠️ 免責聲明
+##  免責聲明
 本專案所使用之遊戲圖像與素材版權均歸 **米哈遊 (miHoYo / HoYoverse)** 所有。本網頁僅作為課程作業之學術用途，不作任何商業化使用。
