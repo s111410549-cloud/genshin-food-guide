@@ -4,73 +4,140 @@
     <meta charset="UTF-8">
     <title>提瓦特美食札記 - 雲端版</title>
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f4f1e9; margin: 0; display: flex; flex-direction: column; align-items: center; color: #4a3e2e; }
-        header { width: 100%; text-align: center; padding: 30px 0 10px 0; color: #84643a; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+        /* 整體質感設定 */
+        body { 
+            font-family: "Microsoft JhengHei", sans-serif; 
+            background-color: #f4f1e9; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            color: #4a3e2e;
+            /* 手帳點點底紋 */
+            background-image: radial-gradient(#d4a373 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+        }
         
+        header { 
+            width: 100%; 
+            text-align: center; 
+            padding: 50px 0 20px 0; 
+            color: #84643a; 
+            font-size: 32px; 
+            font-weight: bold; 
+            letter-spacing: 5px;
+            text-shadow: 2px 2px 0px rgba(255,255,255,0.8);
+        }
+
         /* 主要容器 */
-        .main-container { display: flex; flex-direction: column; width: 90%; max-width: 900px; gap: 25px; margin-bottom: 30px; }
-        
-        /* 三連圖展示區 - 美化版 */
+        .main-container { 
+            position: relative; 
+            width: 90%; 
+            max-width: 1000px; 
+            z-index: 1; 
+        }
+
+        /* 上方三連圖 - 刻意亂序的手工感 */
         .gallery-container { 
             display: flex; 
-            gap: 20px; 
-            width: 100%; 
-            padding: 10px 0;
+            justify-content: center;
+            gap: 25px; 
+            padding: 40px 0;
+            perspective: 1000px;
         }
         .gallery-item { 
-            flex: 1; 
+            flex: 0 1 280px;
             background: white; 
-            border-radius: 4px; /* 較小的圓角更有相片感 */
-            overflow: hidden; 
-            aspect-ratio: 3 / 2; /* 讓圖片變扁，更好看 */
-            box-shadow: 0 10px 20px rgba(132, 100, 58, 0.15);
-            border: 6px solid white; /* 白邊框 */
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
+            padding: 10px 10px 35px 10px; /* 下方加寬像拍立得 */
+            box-shadow: 5px 10px 20px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid #e8e4d8;
         }
-        .gallery-item:hover {
-            transform: translateY(-8px) rotate(1deg); /* 懸停微跳起並旋轉 */
-            box-shadow: 0 15px 30px rgba(132, 100, 58, 0.25);
-            z-index: 10;
+        /* 預設歪斜角度 */
+        .gallery-item:nth-child(1) { transform: rotate(-4deg) translateY(10px); }
+        .gallery-item:nth-child(2) { transform: rotate(2deg) translateY(-5px); z-index: 2; }
+        .gallery-item:nth-child(3) { transform: rotate(-2deg) translateY(15px); }
+        
+        .gallery-item:hover { 
+            transform: scale(1.1) rotate(0deg) translateY(-10px) !important; 
+            z-index: 10; 
+            box-shadow: 0 20px 40px rgba(132,100,58,0.3); 
         }
+        
         .gallery-item img { 
             width: 100%; 
-            height: 100%; 
+            aspect-ratio: 1/1; 
             object-fit: cover; 
-            display: block;
-            transition: filter 0.3s ease;
+            background: #eee;
         }
-        .gallery-item:hover img {
-            filter: brightness(1.05);
+
+        /* 裝飾貼紙 (亂入插圖) */
+        .deco-sticker {
+            position: absolute;
+            pointer-events: none;
+            filter: drop-shadow(3px 3px 2px rgba(0,0,0,0.1));
+            z-index: 5;
+            opacity: 0.9;
         }
 
         /* 管理員表單區 */
-        .form-container { display: none; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px dashed #d4a373; }
-        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; box-sizing: border-box; background: #fafafa; }
-        .save-btn { width: 100%; padding: 15px; background: #d4a373; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.2s; }
-        .save-btn:hover { background: #bc8a5f; }
-        
-        /* 下方料理展示區 */
-        #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; width: 90%; max-width: 900px; padding-bottom: 50px; }
-        .food-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 15px; border-left: 6px solid #d4a373; position: relative; transition: transform 0.2s; }
-        .food-card:hover { transform: scale(1.02); }
-        .food-card img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; }
-        .food-info { flex: 1; }
-        .category-tag { background: #f0e6d2; color: #84643a; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; margin-bottom: 5px; }
-        
-        .delete-btn { 
+        .form-container { 
             display: none; 
-            position: absolute; 
-            top: 10px; 
-            right: 10px; 
-            background: #ff5e5e; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            padding: 4px 8px; 
-            cursor: pointer; 
-            font-size: 12px;
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(10px);
+            padding: 30px; 
+            border-radius: 20px; 
+            border: 2px dashed #d4a373; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            margin-bottom: 40px;
+        }
+        input, select, textarea { 
+            width: 100%; padding: 12px; margin-bottom: 12px; 
+            border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box;
+            background: #fff; font-size: 14px;
+        }
+        .save-btn { 
+            width: 100%; padding: 15px; background: #84643a; color: white; 
+            border: none; border-radius: 50px; cursor: pointer; font-size: 16px; 
+            font-weight: bold; transition: 0.3s;
+        }
+        .save-btn:hover { background: #5d4037; transform: scale(1.02); }
+
+        /* 下方料理圖鑑 - 保持極度整齊 */
+        #displayArea { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); 
+            gap: 30px; 
+            width: 90%; 
+            max-width: 1000px; 
+            padding-bottom: 80px;
+        }
+        .food-card { 
+            background: white; 
+            border-radius: 20px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            display: flex; 
+            flex-direction: column; 
+            transition: all 0.3s;
+            border: 1px solid rgba(212, 163, 115, 0.1);
+        }
+        .food-card:hover { 
+            transform: translateY(-10px); 
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1); 
+        }
+        .food-card img { width: 100%; height: 200px; object-fit: cover; }
+        .food-content { padding: 20px; position: relative; }
+        .category-tag { 
+            background: #f0e6d2; color: #84643a; padding: 3px 12px; 
+            border-radius: 50px; font-size: 11px; font-weight: bold; margin-bottom: 10px; display: inline-block; 
+        }
+        .food-name { font-size: 20px; font-weight: bold; color: #5d4037; margin: 5px 0; }
+        .food-intro { font-size: 13px; color: #7d6b5d; line-height: 1.6; height: 3.2em; overflow: hidden; margin-bottom: 15px; }
+
+        .delete-btn { 
+            background: #ff5e5e; color: white; border: none; padding: 5px 12px; 
+            border-radius: 6px; cursor: pointer; font-size: 12px;
         }
     </style>
 </head>
@@ -79,30 +146,33 @@
 <header>🍴 提瓦特美食札記</header>
 
 <div class="main-container">
+    <img src="https://img-os-static.hoyolab.com/communityWeb/upload/6198f2b7405f63d04d16d120a7b53941.png" class="deco-sticker" style="width:120px; top:-50px; left:-60px; transform: rotate(-15deg);">
+    <img src="https://uploadstatic.mihoyo.com/mhy_screenshot/20210719/2021071911145220716.png" class="deco-sticker" style="width:100px; bottom:-20px; right:-50px; transform: rotate(15deg);">
+
     <div class="gallery-container">
-        <div class="gallery-item"><img id="img1" src="https://via.placeholder.com/400x266?text=Loading..."></div>
-        <div class="gallery-item"><img id="img2" src="https://via.placeholder.com/400x266?text=Loading..."></div>
-        <div class="gallery-item"><img id="img3" src="https://via.placeholder.com/400x266?text=Loading..."></div>
+        <div class="gallery-item"><img id="img1" src="https://via.placeholder.com/400x400?text=Wait..."></div>
+        <div class="gallery-item"><img id="img2" src="https://via.placeholder.com/400x400?text=Wait..."></div>
+        <div class="gallery-item"><img id="img3" src="https://via.placeholder.com/400x400?text=Wait..."></div>
     </div>
 
     <div class="form-container" id="adminForm">
-        <h3 style="margin-top:0; color:#84643a;">新增料理</h3>
+        <h3 style="margin-top:0; color:#84643a;">新增美食紀錄</h3>
         <input type="text" id="name" placeholder="料理名稱">
         <select id="category">
             <option value="主食">主食</option>
             <option value="飲品">飲品</option>
             <option value="點心">點心</option>
         </select>
-        <textarea id="intro" rows="2" placeholder="介紹一下這道美食..."></textarea>
+        <textarea id="intro" rows="2" placeholder="介紹一下這道美食的口感或背後的故事..."></textarea>
         <input type="text" id="foodImgUrl" placeholder="料理圖片網址">
-        <button class="save-btn" id="uploadBtn">存入雲端圖鑑</button>
+        <button class="save-btn" id="uploadBtn">收錄至美食札記</button>
 
-        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+        <hr style="margin: 25px 0; border: 0; border-top: 1px dashed #d4a373;">
         
-        <h3 style="color:#84643a;">管理上方三連圖 (Enter 儲存)</h3>
-        <input type="text" id="url1" placeholder="圖片 1 網址" onkeypress="updateGallery(event, 1)">
-        <input type="text" id="url2" placeholder="圖片 2 網址" onkeypress="updateGallery(event, 2)">
-        <input type="text" id="url3" placeholder="圖片 3 網址" onkeypress="updateGallery(event, 3)">
+        <h3 style="color:#84643a;">更換封面相片 (網址後按 Enter)</h3>
+        <input type="text" id="url1" placeholder="封面 1" onkeypress="updateGallery(event, 1)">
+        <input type="text" id="url2" placeholder="封面 2" onkeypress="updateGallery(event, 2)">
+        <input type="text" id="url3" placeholder="封面 3" onkeypress="updateGallery(event, 3)">
     </div>
 </div>
 
@@ -144,7 +214,6 @@
             const updateData = {};
             updateData[`url${index}`] = url;
             await setDoc(doc(db, "settings", "gallery"), updateData, { merge: true });
-            alert("更新成功！");
             location.reload();
         }
     };
@@ -158,11 +227,11 @@
             area.innerHTML += `
                 <div class="food-card">
                     <img src="${data.image}">
-                    <div class="food-info">
-                        <button class="delete-btn" style="display: ${isAdmin ? 'block' : 'none'}" onclick="deleteFood('${foodDoc.id}')">刪除</button>
-                        <span class="category-tag">${data.category}</span><br>
-                        <strong>${data.name}</strong>
-                        <p style="font-size:13px; color:#666; margin:5px 0;">${data.intro}</p>
+                    <div class="food-content">
+                        <span class="category-tag">${data.category}</span>
+                        <div class="food-name">${data.name}</div>
+                        <p class="food-intro">${data.intro}</p>
+                        <button class="delete-btn" style="display: ${isAdmin ? 'block' : 'none'}" onclick="deleteFood('${foodDoc.id}')">刪除紀錄</button>
                     </div>
                 </div>`;
         });
@@ -171,7 +240,7 @@
     document.getElementById('uploadBtn').onclick = async () => {
         const name = document.getElementById('name').value;
         const imgUrl = document.getElementById('foodImgUrl').value;
-        if (!name || !imgUrl) return alert("必填項目缺失");
+        if (!name || !imgUrl) return alert("填寫料理名稱與圖片網址！");
         await addDoc(collection(db, "foods"), {
             name: name,
             category: document.getElementById('category').value,
@@ -179,17 +248,13 @@
             image: imgUrl,
             createdAt: Date.now()
         });
-        alert("上傳成功！");
+        alert("已成功收錄！");
         location.reload();
     };
 
     window.deleteFood = async (id) => {
-        if (confirm("確定要刪除這道美食嗎？")) {
-            try {
-                await deleteDoc(doc(db, "foods", id)); 
-            } catch (error) {
-                alert("刪除失敗：" + error.message);
-            }
+        if (confirm("要撕掉這頁美食紀錄嗎？")) {
+            await deleteDoc(doc(db, "foods", id)); 
         }
     };
 </script>
