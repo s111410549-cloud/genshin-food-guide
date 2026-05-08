@@ -58,3 +58,72 @@
 
 ##  免責聲明
 本專案所使用之遊戲圖像與素材版權均歸 **米哈遊 (miHoYo / HoYoverse)** 所有。本網頁僅作為課程作業之學術用途，不作任何商業化使用。
+
+
+# 🍴 提瓦特美食札記 (Genshin Food Guide)
+
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat-square&logo=firebase&logoColor=white)](https://firebase.google.com/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/zh-TW/docs/Web/JavaScript)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+一個結合《原神》遊戲主題與現代 Web 技術的動態美食社群網頁。本專案透過雲端資料庫技術，實作了資料即時同步、多端分類篩選以及管理員特權管理系統。
+
+## 🌐 部署連結
+* **冒險者頁面 (預覽模式)**：[點擊前往](https://s111410549-cloud.github.io/genshin-food-guide/)
+* **後台入口 (管理模式)**：[進入編輯模式](https://s111410549-cloud.github.io/genshin-food-guide/?mode=admin)
+
+---
+
+## 🎯 專案動機與核心目標
+本專案旨在打造一個具備沉浸感的使用者體驗介面，解決靜態網頁無法即時更新資料的痛點。
+* **資料驅動**：所有美食資料與留言內容均由後端資料庫動態渲染。
+* **權限隔離**：利用 URL 參數與 LocalStorage 邏輯，在不增加登入負擔的前提下實作簡易權限管理。
+* **響應式設計**：完美適配各類螢幕尺寸，讓冒險者隨時隨地記錄美食。
+
+## ✨ 功能亮點
+
+### 🔍 智能篩選與展示
+* **類別過濾**：提供「主食」、「飲品」、「點心」等標籤篩選，減少資訊過載。
+* **動態畫廊**：頂部拍立得區域支援動態對話氣泡與隨機視覺特效。
+
+### 💬 即時互動留言系統
+* **無縫同步**：留言後無需重新整理頁面，透過監聽技術即時更新留言板。
+* **個人化管理**：留言者可查看自己的留言，並透過前端邏輯控制顯示刪除按鈕。
+
+### 🛠️ 管理員控制面板 (`?mode=admin`)
+* **資料收錄**：提供直觀的表單介面，支援料理名稱、圖片連結與簡介的快速錄入。
+* **內容維護**：管理員擁有最高權限，可清理不當留言或更新料理資訊。
+
+---
+
+## 🛠️ 技術棧 (Tech Stack)
+* **前端 (Frontend)**: HTML5, CSS3 (Custom Properties / Flexbox / Grid), JavaScript ES6 Modules.
+* **後端 (Backend)**: Google Firebase - Cloud Firestore (NoSQL 資料庫).
+* **環境部署 (CI/CD)**: GitHub Pages 連動自動化部署.
+
+---
+
+## 🔒 資料安全與架構 (Firebase Security Rules)
+專案採用 Cloud Firestore 進行資料管理，並針對安全性設定了細緻的規則，以防範未經授權的資料修改：
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. 全域讀取權限：讓所有冒險者都能查閱美食內容
+    match /{document=**} {
+      allow read: if true;
+    }
+    
+    // 2. 留言區規則：允許任何人新增留言，但刪除操作需具備 admin 身分
+    match /comments/{commentId} {
+      allow create: if true;
+      allow delete: if request.query.mode == "admin";
+    }
+    
+    // 3. 核心美食資料：僅限管理員模式進行寫入/更新
+    match /foods/{foodId} {
+      allow write: if request.query.mode == "admin";
+    }
+  }
+}
