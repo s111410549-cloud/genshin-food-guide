@@ -4,7 +4,7 @@
 * **學生姓名**：張家愷
 * **學號**：111410549
 * **開發工具**：Visual Studio Code
-* **技術堆疊**：Firebase Firestore, JavaScript (ES6), HTML5, CSS3, GitHub Pages
+* **技術**：Firebase Firestore, JavaScript (ES6), HTML5, CSS3, GitHub Pages
 
 ---
 
