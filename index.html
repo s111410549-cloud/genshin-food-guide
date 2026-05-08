@@ -58,7 +58,7 @@
         .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 300px;}
         input, select, textarea { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
 
-        /* ✨ 新增：留言區樣式 ✨ */
+        /* ✨ 留言區樣式 ✨ */
         .comment-section {
             width: 90%; max-width: 800px; margin: 50px 0 100px 0;
             background: #fffdf7; border: 1px solid #d4a373;
@@ -78,10 +78,14 @@
         .comment-item {
             padding: 15px 0; border-bottom: 1px dashed #e8e4d8;
             animation: fadeIn 0.5s ease-in;
+            display: flex; justify-content: space-between; align-items: flex-start;
         }
+        .comment-info { flex-grow: 1; }
         .comment-user { font-weight: bold; color: #5d4037; font-size: 14px; }
         .comment-text { color: #7d6b5d; margin: 5px 0; font-size: 15px; }
         .comment-date { font-size: 10px; color: #bcaaa4; }
+        .btn-delete { color: #e57373; border: 1px solid #e57373; background: none; cursor: pointer; font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-left: 10px; transition: 0.2s; }
+        .btn-delete:hover { background: #e57373; color: white; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -131,8 +135,7 @@
         <input type="text" id="commentContent" placeholder="想說的話...">
         <button onclick="sendComment()">留言</button>
     </div>
-    <div id="commentList" class="comment-list">
-        </div>
+    <div id="commentList" class="comment-list"></div>
 </div>
 
 <script type="module">
@@ -150,10 +153,12 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    // 判定是否為管理員
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    // --- 原有功能：美食載入 ---
+    // --- 1. 美食載入功能 ---
     async function loadGallery() {
         const docSnap = await getDoc(doc(db, "settings", "gallery"));
         if (docSnap.exists()) {
@@ -183,53 +188,91 @@
                         <span class="category-tag"># ${f.category}</span>
                         <div class="food-name">${f.name}</div>
                         <p class="food-intro">${f.intro}</p>
-                        ${isAdmin ? `<button onclick="deleteFood('${f.id}')" style="margin-top:10px; color:red; border:none; background:none; cursor:pointer; font-size:10px;">[撕掉此頁]</button>` : ''}
+                        ${isAdmin ? `<button onclick="deleteFood('${f.id}')" class="btn-delete">[撕掉此頁]</button>` : ''}
                     </div>
                 </div>`;
         });
     }
 
-    // ✨ 新增：留言板邏輯 ✨
+    // --- 2. 留言板邏輯 (已整合權限控制) ---
     
-    // 1. 監聽留言 (即時更新)
+    // 監聽留言：即時更新且判斷刪除按鈕
     onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
         const listArea = document.getElementById('commentList');
         listArea.innerHTML = '';
+
+        // 讀取本地儲存的「我的留言 ID 清單」
+        const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
+
         snapshot.forEach(docSnap => {
             const c = docSnap.data();
+            const cid = docSnap.id;
             const date = new Date(c.createdAt).toLocaleString();
+            
+            // 權限判斷：管理員模式 OR 留言 ID 在我的本地紀錄中
+            const canDelete = isAdmin || mySentComments.includes(cid);
+
             listArea.innerHTML += `
                 <div class="comment-item">
-                    <div class="comment-user">👤 ${c.user}</div>
-                    <div class="comment-text">${c.content}</div>
-                    <div class="comment-date">${date}</div>
-                    ${isAdmin ? `<button onclick="deleteComment('${docSnap.id}')" style="color:red; border:none; background:none; cursor:pointer; font-size:10px;">[刪除]</button>` : ''}
+                    <div class="comment-info">
+                        <div class="comment-user">👤 ${c.user}</div>
+                        <div class="comment-text">${c.content}</div>
+                        <div class="comment-date">${date}</div>
+                    </div>
+                    ${canDelete ? `<button onclick="deleteComment('${cid}')" class="btn-delete">刪除</button>` : ''}
                 </div>
             `;
         });
     });
 
-    // 2. 發送留言
+    // 發送留言：存入資料庫並記錄 ID 到本地
     window.sendComment = async () => {
         const user = document.getElementById('commentUser').value;
         const content = document.getElementById('commentContent').value;
         if(!user || !content) return alert("請留下大名與留言內容！");
 
-        await addDoc(collection(db, "comments"), {
-            user, content, createdAt: Date.now()
-        });
+        try {
+            const docRef = await addDoc(collection(db, "comments"), {
+                user, content, createdAt: Date.now()
+            });
 
-        document.getElementById('commentContent').value = ''; // 清空輸入框
+            // 將新產生的留言 ID 存入 LocalStorage
+            const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
+            mySentComments.push(docRef.id);
+            localStorage.setItem('my_sent_comments', JSON.stringify(mySentComments));
+
+            document.getElementById('commentContent').value = ''; 
+        } catch (e) {
+            alert("留言失敗，請確認資料庫設定！");
+        }
     };
 
-    // 3. 刪除留言 (管理員功能)
-    window.deleteComment = async (id) => { if(confirm("確定刪除此留言？")) await deleteDoc(doc(db,"comments",id)); };
+    // 刪除留言
+    window.deleteComment = async (id) => { 
+        if(confirm("確定要刪除這則食客留書嗎？")) {
+            await deleteDoc(doc(db, "comments", id)); 
+        }
+    };
 
-    // --- 其他原有功能 ---
+    // --- 3. 美食管理功能 ---
+    window.addFood = async () => {
+        const name = document.getElementById('name').value;
+        const img = document.getElementById('foodImgUrl').value;
+        if(!name || !img) return alert("請填寫料理名稱與圖片網址！");
+        await addDoc(collection(db, "foods"), {
+            name, image: img, category: document.getElementById('category').value,
+            intro: document.getElementById('intro').value, createdAt: Date.now()
+        });
+        alert("收錄成功！");
+    };
+
+    window.deleteFood = async (id) => { 
+        if(confirm("確定撕掉這一頁嗎？")) await deleteDoc(doc(db, "foods", id)); 
+    };
+
     document.getElementById('filterCategory').onchange = (e) => renderFoods(e.target.value);
-    window.addFood = async () => { /* ...原本的 addFood 代碼... */ };
-    window.deleteFood = async (id) => { /* ...原本的 deleteFood 代碼... */ };
 
+    // ✨ 滑鼠特效
     document.addEventListener('mousemove', (e) => {
         if (Math.random() > 0.9) {
             const p = document.createElement('div');
