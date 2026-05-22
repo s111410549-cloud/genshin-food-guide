@@ -69,15 +69,15 @@
 <div class="gallery-container">
     <div class="gallery-item">
         <div class="bubble">我不是應急食品？</div>
-        <img id="img1" src="https://via.placeholder.com/400x400?text=美食展示 1">
+        <img id="img1" src="https://via.placeholder.com/400x400?text=載入中...">
     </div>
     <div class="gallery-item">
         <div class="bubble">今天也要好好吃飯喔！</div>
-        <img id="img2" src="https://via.placeholder.com/400x400?text=美食展示 2">
+        <img id="img2" src="https://via.placeholder.com/400x400?text=載入中...">
     </div>
     <div class="gallery-item">
         <div class="bubble">三彩糰子...好吃</div>
-        <img id="img3" src="https://via.placeholder.com/400x400?text=美食展示 3">
+        <img id="img3" src="https://via.placeholder.com/400x400?text=載入中...">
     </div>
 </div>
 
@@ -92,7 +92,7 @@
 </div>
 
 <div class="form-container" id="adminForm">
-    <div class="storage-hint">💡 已繞過 Storage，請直接填入圖片網址</div>
+    <div class="storage-hint">💡 請貼上圖片網址 (結尾須為 .jpg/png)</div>
     <input type="text" id="name" placeholder="料理名稱">
     <select id="category">
         <option value="主食">主食</option>
@@ -100,7 +100,7 @@
         <option value="點心">點心</option>
     </select>
     <textarea id="intro" placeholder="介紹..."></textarea>
-    <input type="text" id="foodImageUrl" placeholder="圖片網址 (例如: https://i.imgur.com/xxx.png)">
+    <input type="text" id="foodImageUrl" placeholder="圖片網址 (結尾為 .jpg/png)">
     <button id="addBtn" onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer;">收錄</button>
 </div>
 
@@ -135,7 +135,21 @@
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    // --- 1. 監聽數據渲染 ---
+    // === 【修復】原本的插圖不見了？因為我漏加了這一段 ===
+    async function loadGallery() {
+        try {
+            const docSnap = await getDoc(doc(db, "settings", "gallery"));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if(data.url1) document.getElementById('img1').src = data.url1;
+                if(data.url2) document.getElementById('img2').src = data.url2;
+                if(data.url3) document.getElementById('img3').src = data.url3;
+            }
+        } catch (e) { console.error("Gallery Error:", e); }
+    }
+    loadGallery(); // === 執行載入插圖 ===
+
+    // --- 數據監聽渲染 ---
     let allFoods = [];
     onSnapshot(query(collection(db, "foods"), orderBy("createdAt", "desc")), (snapshot) => {
         allFoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -156,7 +170,6 @@
                     <div class="food-name">${f.name}</div>
                     <p class="food-intro">${f.intro}</p>
                 </div>`;
-            
             if (isAdmin) {
                 const delBtn = document.createElement('button');
                 delBtn.className = 'btn-delete';
@@ -168,7 +181,7 @@
         });
     }
 
-    // --- 2. 核心功能函式 ---
+    // --- 核心功能 (繞過 Storage 版本) ---
     window.addFood = async () => {
         const name = document.getElementById('name').value;
         const imageUrl = document.getElementById('foodImageUrl').value;
@@ -186,18 +199,16 @@
                 name, image: imageUrl, category, intro, createdAt: Date.now()
             });
             alert("收錄成功！");
-            document.getElementById('name').value = '';
             document.getElementById('foodImageUrl').value = '';
-            document.getElementById('intro').value = '';
         } catch (e) {
-            alert("收錄失敗：" + e.message);
+            alert("錯誤：" + e.message);
         } finally {
             btn.disabled = false;
             btn.innerText = "收錄";
         }
     };
 
-    // --- 3. 留言板 ---
+    // --- 留言板 ---
     onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
         const listArea = document.getElementById('commentList');
         listArea.innerHTML = '';
@@ -206,13 +217,6 @@
             const item = document.createElement('div');
             item.className = 'comment-item';
             item.innerHTML = `<div>👤 <b>${c.user}</b>: ${c.content}</div>`;
-            if (isAdmin) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete';
-                delBtn.innerText = '刪除';
-                delBtn.onclick = () => deleteDoc(doc(db, "comments", docSnap.id));
-                item.appendChild(delBtn);
-            }
             listArea.appendChild(item);
         });
     });
@@ -220,7 +224,7 @@
     window.sendComment = async () => {
         const user = document.getElementById('commentUser').value;
         const content = document.getElementById('commentContent').value;
-        if(!user || !content) return alert("請填寫名字與內容");
+        if(!user || !content) return alert("請填寫大名與留言！");
         await addDoc(collection(db, "comments"), { user, content, createdAt: Date.now() });
         document.getElementById('commentContent').value = '';
     };
