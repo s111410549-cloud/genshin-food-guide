@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>提瓦特美食札記</title>
     <style>
-        /* --- 這裡保留你原本所有的樣式，完全沒動 --- */
+        /* 保留你原本所有的樣式 */
         body { 
             font-family: "Microsoft JhengHei", sans-serif; 
             background-color: #f4f1e9; margin: 0; 
@@ -105,10 +105,14 @@
 
 <div class="form-container" id="adminForm">
     <input type="text" id="name" placeholder="料理名稱">
-    <select id="category"><option value="主食">主食</option><option value="飲品">飲品</option><option value="點心">點心</option></select>
+    <select id="category">
+        <option value="主食">主食</option>
+        <option value="飲品">飲品</option>
+        <option value="點心">點心</option>
+    </select>
     <textarea id="intro" placeholder="介紹..."></textarea>
     <input type="file" id="foodImage" accept="image/*" style="padding: 5px 0;">
-    <button onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer;">收錄</button>
+    <button id="addBtn" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer;">收錄</button>
 </div>
 
 <div id="displayArea"></div>
@@ -118,13 +122,12 @@
     <div class="comment-input-group">
         <input type="text" id="commentUser" placeholder="冒險者大名">
         <input type="text" id="commentContent" placeholder="想說的話...">
-        <button onclick="sendComment()">留言</button>
+        <button id="commentBtn">留言</button>
     </div>
     <div id="commentList" class="comment-list"></div>
 </div>
 
 <script type="module">
-    // ✨ 引入 Storage 模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
@@ -133,30 +136,33 @@
         apiKey: "AIzaSyCObKMkSnYZip04WBNyPC5gIDabK2VYevE",
         authDomain: "genshin-food-cloud.firebaseapp.com",
         projectId: "genshin-food-cloud",
-        storageBucket: "genshin-food-cloud.appspot.com", // 修正後的 Bucket
+        storageBucket: "genshin-food-cloud.appspot.com",
         messagingSenderId: "77374518719",
         appId: "1:77374518719:web:fd859216db13a4b55e5d0a"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app); // 初始化 Storage
+    const storage = getStorage(app);
 
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
     // --- 1. 載入精選美食圖 ---
     async function loadGallery() {
-        const docSnap = await getDoc(doc(db, "settings", "gallery"));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if(data.url1) document.getElementById('img1').src = data.url1;
-            if(data.url2) document.getElementById('img2').src = data.url2;
-            if(data.url3) document.getElementById('img3').src = data.url3;
-        }
+        try {
+            const docSnap = await getDoc(doc(db, "settings", "gallery"));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if(data.url1) document.getElementById('img1').src = data.url1;
+                if(data.url2) document.getElementById('img2').src = data.url2;
+                if(data.url3) document.getElementById('img3').src = data.url3;
+            }
+        } catch (e) { console.error("Gallery Error:", e); }
     }
     loadGallery();
 
+    // --- 2. 監聽數據 ---
     let allFoods = [];
     onSnapshot(query(collection(db, "foods"), orderBy("createdAt", "desc")), (snapshot) => {
         allFoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -168,20 +174,28 @@
         area.innerHTML = '';
         const list = filter === "全部" ? allFoods : allFoods.filter(f => f.category === filter);
         list.forEach(f => {
-            area.innerHTML += `
-                <div class="food-card">
-                    <img src="${f.image}">
-                    <div class="food-content">
-                        <span class="category-tag"># ${f.category}</span>
-                        <div class="food-name">${f.name}</div>
-                        <p class="food-intro">${f.intro}</p>
-                        ${isAdmin ? `<button onclick="deleteFood('${f.id}')" class="btn-delete">[撕掉此頁]</button>` : ''}
-                    </div>
+            const card = document.createElement('div');
+            card.className = 'food-card';
+            card.innerHTML = `
+                <img src="${f.image}">
+                <div class="food-content">
+                    <span class="category-tag"># ${f.category}</span>
+                    <div class="food-name">${f.name}</div>
+                    <p class="food-intro">${f.intro}</p>
                 </div>`;
+            
+            if (isAdmin) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-delete';
+                delBtn.innerText = '[撕掉此頁]';
+                delBtn.onclick = () => deleteFood(f.id);
+                card.querySelector('.food-content').appendChild(delBtn);
+            }
+            area.appendChild(card);
         });
     }
 
-    // --- 2. 留言板邏輯 ---
+    // --- 3. 留言板邏輯 ---
     onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
         const listArea = document.getElementById('commentList');
         listArea.innerHTML = '';
@@ -191,17 +205,61 @@
             const cid = docSnap.id;
             const date = new Date(c.createdAt).toLocaleString();
             const canDelete = isAdmin || mySentComments.includes(cid);
-            listArea.innerHTML += `
-                <div class="comment-item">
-                    <div class="comment-info">
-                        <div class="comment-user">👤 ${c.user}</div>
-                        <div class="comment-text">${c.content}</div>
-                        <div class="comment-date">${date}</div>
-                    </div>
-                    ${canDelete ? `<button onclick="deleteComment('${cid}')" class="btn-delete">刪除</button>` : ''}
+            
+            const item = document.createElement('div');
+            item.className = 'comment-item';
+            item.innerHTML = `
+                <div class="comment-info">
+                    <div class="comment-user">👤 ${c.user}</div>
+                    <div class="comment-text">${c.content}</div>
+                    <div class="comment-date">${date}</div>
                 </div>`;
+            
+            if (canDelete) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-delete';
+                delBtn.innerText = '刪除';
+                delBtn.onclick = () => deleteComment(cid);
+                item.appendChild(delBtn);
+            }
+            listArea.appendChild(item);
         });
     });
+
+    // --- 4. 功能函式 (掛載到 window) ---
+    window.addFood = async () => {
+        const name = document.getElementById('name').value;
+        const fileInput = document.getElementById('foodImage');
+        const file = fileInput.files[0];
+        const category = document.getElementById('category').value;
+        const intro = document.getElementById('intro').value;
+
+        if(!name || !file) return alert("請填寫名稱並選取照片！");
+
+        const btn = document.getElementById('addBtn');
+        btn.disabled = true;
+        btn.innerText = "上傳中...";
+
+        try {
+            const storageRef = ref(storage, 'foods/' + Date.now() + "_" + file.name);
+            const uploadTask = await uploadBytes(storageRef, file);
+            const imageUrl = await getDownloadURL(uploadTask.ref);
+
+            await addDoc(collection(db, "foods"), {
+                name, image: imageUrl, category, intro, createdAt: Date.now()
+            });
+
+            alert("收錄成功！");
+            document.getElementById('name').value = '';
+            fileInput.value = '';
+            document.getElementById('intro').value = '';
+        } catch (e) {
+            alert("收錄失敗：" + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "收錄";
+        }
+    };
 
     window.sendComment = async () => {
         const user = document.getElementById('commentUser').value;
@@ -218,41 +276,15 @@
         if(confirm("確定要刪除留言嗎？")) await deleteDoc(doc(db, "comments", id)); 
     };
 
-    // --- 3. 修改後的收錄功能 (自動上傳照片) ---
-    window.addFood = async () => {
-        const name = document.getElementById('name').value;
-        const fileInput = document.getElementById('foodImage');
-        const file = fileInput.files[0];
-        const category = document.getElementById('category').value;
-        const intro = document.getElementById('intro').value;
-
-        if(!name || !file) return alert("請填寫名稱並選取照片！");
-
-        try {
-            // A. 上傳照片
-            const storageRef = ref(storage, 'foods/' + Date.now() + "_" + file.name);
-            const uploadTask = await uploadBytes(storageRef, file);
-            const imageUrl = await getDownloadURL(uploadTask.ref);
-
-            // B. 儲存到 Firestore
-            await addDoc(collection(db, "foods"), {
-                name, image: imageUrl, category, intro, createdAt: Date.now()
-            });
-
-            alert("收錄成功！");
-            document.getElementById('name').value = '';
-            fileInput.value = '';
-            document.getElementById('intro').value = '';
-        } catch (e) {
-            alert("收錄失敗：" + e.message);
-        }
-    };
-
     window.deleteFood = async (id) => { 
         if(confirm("確定撕掉這一頁嗎？")) await deleteDoc(doc(db, "foods", id)); 
     };
 
+    // 事件監聽綁定
+    document.getElementById('addBtn').onclick = window.addFood;
+    document.getElementById('commentBtn').onclick = window.sendComment;
     document.getElementById('filterCategory').onchange = (e) => renderFoods(e.target.value);
+
 </script>
 </body>
 </html>
