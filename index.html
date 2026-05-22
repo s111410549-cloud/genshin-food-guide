@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>提瓦特美食札記</title>
     <style>
-        /* 樣式部分保持不變 */
         body { 
             font-family: "Microsoft JhengHei", sans-serif; 
             background-color: #f4f1e9; margin: 0; 
@@ -50,7 +49,7 @@
         .food-intro { font-size: 14px; color: #7d6b5d; line-height: 1.6; padding-top: 10px; margin: 0; opacity: 0; transition: 0.3s; }
         .food-card:hover .food-intro { opacity: 1; }
         .category-tag { font-size: 11px; color: #84643a; font-weight: bold; }
-        .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 300px;}
+        .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 320px;}
         input, select, textarea { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
         .comment-section { width: 90%; max-width: 800px; margin: 50px 0 100px 0; background: #fffdf7; border: 1px solid #d4a373; padding: 30px; box-shadow: 8px 8px 0px #d4a373; position: relative; }
         .comment-section h3 { margin-top: 0; color: #84643a; border-left: 5px solid #d4a373; padding-left: 10px; }
@@ -60,6 +59,7 @@
         .comment-list { max-height: 400px; overflow-y: auto; }
         .comment-item { padding: 15px 0; border-bottom: 1px dashed #e8e4d8; display: flex; justify-content: space-between; align-items: flex-start; }
         .btn-delete { color: #e57373; border: 1px solid #e57373; background: none; cursor: pointer; font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-left: 10px; }
+        .storage-hint { font-size: 11px; color: #d4a373; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -69,21 +69,21 @@
 <div class="gallery-container">
     <div class="gallery-item">
         <div class="bubble">我不是應急食品？</div>
-        <img id="img1" src="https://via.placeholder.com/400x400?text=載入中...">
+        <img id="img1" src="https://via.placeholder.com/400x400?text=美食展示 1">
     </div>
     <div class="gallery-item">
         <div class="bubble">今天也要好好吃飯喔！</div>
-        <img id="img2" src="https://via.placeholder.com/400x400?text=載入中...">
+        <img id="img2" src="https://via.placeholder.com/400x400?text=美食展示 2">
     </div>
     <div class="gallery-item">
         <div class="bubble">三彩糰子...好吃</div>
-        <img id="img3" src="https://via.placeholder.com/400x400?text=載入中...">
+        <img id="img3" src="https://via.placeholder.com/400x400?text=美食展示 3">
     </div>
 </div>
 
 <div class="filter-box">
     <label>🔍 翻閱品項：</label>
-    <select id="filterCategory" style="border:none; outline:none; cursor:pointer; font-size: 16px;">
+    <select id="filterCategory">
         <option value="全部">全部顯示</option>
         <option value="主食">主食</option>
         <option value="飲品">飲品</option>
@@ -92,6 +92,7 @@
 </div>
 
 <div class="form-container" id="adminForm">
+    <div class="storage-hint">💡 已繞過 Storage，請直接填入圖片網址</div>
     <input type="text" id="name" placeholder="料理名稱">
     <select id="category">
         <option value="主食">主食</option>
@@ -99,7 +100,7 @@
         <option value="點心">點心</option>
     </select>
     <textarea id="intro" placeholder="介紹..."></textarea>
-    <input type="file" id="foodImage" accept="image/*" style="padding: 5px 0;">
+    <input type="text" id="foodImageUrl" placeholder="圖片網址 (例如: https://i.imgur.com/xxx.png)">
     <button id="addBtn" onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer;">收錄</button>
 </div>
 
@@ -118,7 +119,6 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCObKMkSnYZip04WBNyPC5gIDabK2VYevE",
@@ -131,26 +131,11 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    // --- 1. 載入精選美食圖 ---
-    async function loadGallery() {
-        try {
-            const docSnap = await getDoc(doc(db, "settings", "gallery"));
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if(data.url1) document.getElementById('img1').src = data.url1;
-                if(data.url2) document.getElementById('img2').src = data.url2;
-                if(data.url3) document.getElementById('img3').src = data.url3;
-            }
-        } catch (e) { console.error("Gallery Error:", e); }
-    }
-    loadGallery();
-
-    // --- 2. 監聽數據渲染 ---
+    // --- 1. 監聽數據渲染 ---
     let allFoods = [];
     onSnapshot(query(collection(db, "foods"), orderBy("createdAt", "desc")), (snapshot) => {
         allFoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -165,7 +150,7 @@
             const card = document.createElement('div');
             card.className = 'food-card';
             card.innerHTML = `
-                <img src="${f.image}">
+                <img src="${f.image}" onerror="this.src='https://via.placeholder.com/300x200?text=圖片失效'">
                 <div class="food-content">
                     <span class="category-tag"># ${f.category}</span>
                     <div class="food-name">${f.name}</div>
@@ -183,70 +168,28 @@
         });
     }
 
-    // --- 3. 留言板功能 ---
-    onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
-        const listArea = document.getElementById('commentList');
-        listArea.innerHTML = '';
-        const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
-        snapshot.forEach(docSnap => {
-            const c = docSnap.data();
-            const cid = docSnap.id;
-            const date = new Date(c.createdAt).toLocaleString();
-            const canDelete = isAdmin || mySentComments.includes(cid);
-            
-            const item = document.createElement('div');
-            item.className = 'comment-item';
-            item.innerHTML = `
-                <div class="comment-info">
-                    <div class="comment-user">👤 ${c.user}</div>
-                    <div class="comment-text">${c.content}</div>
-                    <div class="comment-date">${date}</div>
-                </div>`;
-            
-            if (canDelete) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete';
-                delBtn.innerText = '刪除';
-                delBtn.onclick = () => deleteComment(cid);
-                item.appendChild(delBtn);
-            }
-            listArea.appendChild(item);
-        });
-    });
-
-    // --- 4. 核心功能函式 (掛載到 window) ---
+    // --- 2. 核心功能函式 ---
     window.addFood = async () => {
-        console.log("開始執行收錄功能...");
         const name = document.getElementById('name').value;
-        const fileInput = document.getElementById('foodImage');
-        const file = fileInput.files[0];
+        const imageUrl = document.getElementById('foodImageUrl').value;
         const category = document.getElementById('category').value;
         const intro = document.getElementById('intro').value;
 
-        if(!name || !file) return alert("請填寫名稱並選取照片！");
+        if(!name || !imageUrl) return alert("請填寫名稱並貼上圖片網址！");
 
         const btn = document.getElementById('addBtn');
         btn.disabled = true;
-        btn.innerText = "上傳中...";
+        btn.innerText = "寫入中...";
 
         try {
-            console.log("正在嘗試連線到 Firebase Storage...");
-            const storageRef = ref(storage, 'foods/' + Date.now() + "_" + file.name);
-            const uploadTask = await uploadBytes(storageRef, file);
-            console.log("圖片上傳成功，正在取得連結...");
-            const imageUrl = await getDownloadURL(uploadTask.ref);
-
-            console.log("正在寫入 Firestore 資料庫...");
             await addDoc(collection(db, "foods"), {
                 name, image: imageUrl, category, intro, createdAt: Date.now()
             });
-
             alert("收錄成功！");
             document.getElementById('name').value = '';
-            fileInput.value = '';
+            document.getElementById('foodImageUrl').value = '';
             document.getElementById('intro').value = '';
         } catch (e) {
-            console.error("錯誤詳情：", e);
             alert("收錄失敗：" + e.message);
         } finally {
             btn.disabled = false;
@@ -254,30 +197,39 @@
         }
     };
 
+    // --- 3. 留言板 ---
+    onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
+        const listArea = document.getElementById('commentList');
+        listArea.innerHTML = '';
+        snapshot.forEach(docSnap => {
+            const c = docSnap.data();
+            const item = document.createElement('div');
+            item.className = 'comment-item';
+            item.innerHTML = `<div>👤 <b>${c.user}</b>: ${c.content}</div>`;
+            if (isAdmin) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-delete';
+                delBtn.innerText = '刪除';
+                delBtn.onclick = () => deleteDoc(doc(db, "comments", docSnap.id));
+                item.appendChild(delBtn);
+            }
+            listArea.appendChild(item);
+        });
+    });
+
     window.sendComment = async () => {
         const user = document.getElementById('commentUser').value;
         const content = document.getElementById('commentContent').value;
-        if(!user || !content) return alert("請留下大名與留言內容！");
-        try {
-            const docRef = await addDoc(collection(db, "comments"), { user, content, createdAt: Date.now() });
-            const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
-            mySentComments.push(docRef.id);
-            localStorage.setItem('my_sent_comments', JSON.stringify(mySentComments));
-            document.getElementById('commentContent').value = ''; 
-        } catch(e) { alert("留言失敗"); }
-    };
-
-    window.deleteComment = async (id) => { 
-        if(confirm("確定要刪除留言嗎？")) await deleteDoc(doc(db, "comments", id)); 
+        if(!user || !content) return alert("請填寫名字與內容");
+        await addDoc(collection(db, "comments"), { user, content, createdAt: Date.now() });
+        document.getElementById('commentContent').value = '';
     };
 
     window.deleteFood = async (id) => { 
         if(confirm("確定撕掉這一頁嗎？")) await deleteDoc(doc(db, "foods", id)); 
     };
 
-    // 篩選器監聽
     document.getElementById('filterCategory').onchange = (e) => renderFoods(e.target.value);
-
 </script>
 </body>
 </html>
