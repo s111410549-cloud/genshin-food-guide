@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>提瓦特美食札記</title>
     <style>
-        /* 基礎樣式與餐具游標 */
+        /* 1. 全局樣式與餐具游標 */
         body { 
             font-family: "Microsoft JhengHei", sans-serif; 
             background-color: #f4f1e9; margin: 0; 
@@ -12,13 +12,13 @@
             background-image: radial-gradient(#d4a373 0.5px, transparent 0.5px);
             background-size: 24px 24px;
             overflow-x: hidden;
-            /* 餐具符號游標 */
+            /* 強制使用餐具游標 */
             cursor: url('https://cur.cursors-4u.net/food/foo-7/foo668.cur'), auto !important;
         }
 
-        header { padding: 40px 0 20px 0; font-size: 34px; font-weight: bold; letter-spacing: 5px; color: #84643a; text-shadow: 2px 2px 0px #fff; }
-        
-        /* 星星特效樣式 */
+        header { padding: 40px 0 20px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #84643a; }
+
+        /* 2. 星星特效樣式 */
         .star {
             position: absolute;
             background-color: #ffcc00;
@@ -26,16 +26,16 @@
             height: 6px;
             border-radius: 50%;
             pointer-events: none;
-            box-shadow: 0 0 10px #ffcc00, 0 0 20px #fff;
-            animation: fadeOut 0.8s linear forwards;
+            box-shadow: 0 0 10px #ffcc00, 0 0 20px #ffffff;
             z-index: 9999;
+            animation: fadeOut 0.8s ease-out forwards;
         }
         @keyframes fadeOut {
-            from { opacity: 1; transform: scale(1) rotate(0deg); }
-            to { opacity: 0; transform: scale(0) rotate(180deg); }
+            0% { opacity: 1; transform: scale(1) translateY(0); }
+            100% { opacity: 0; transform: scale(0.3) translateY(15px); }
         }
 
-        /* 插圖展示區樣式 */
+        /* 3. 精選插圖區 */
         .gallery-container { display: flex; justify-content: center; gap: 30px; padding: 40px 0; }
         .gallery-item { 
             position: relative; background: white; padding: 10px 10px 35px 10px;
@@ -43,61 +43,62 @@
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 1px solid #e8e4d8; width: 200px;
         }
-        .gallery-item:nth-child(odd) { transform: rotate(-3deg); }
-        .gallery-item:nth-child(even) { transform: rotate(3deg); }
+        .gallery-item:nth-child(1) { transform: rotate(-4deg); }
+        .gallery-item:nth-child(2) { transform: rotate(2deg); }
+        .gallery-item:nth-child(3) { transform: rotate(-2deg); }
         .gallery-item:hover { transform: scale(1.1) rotate(0deg); z-index: 100; }
-        
-        /* 食物相片框：手寫筆記感傾斜 */
-        #displayArea { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 45px; width: 90%; max-width: 1100px; padding: 50px 0; 
-        }
+        .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
 
+        /* 4. 食物卡片 (日記手感) */
+        #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 40px; width: 90%; max-width: 1100px; padding-bottom: 50px; }
+        
         .food-card { 
-            background: white; border-radius: 2px; overflow: hidden; 
-            box-shadow: 3px 6px 15px rgba(0,0,0,0.1); 
-            display: flex; flex-direction: column; transition: all 0.4s ease; 
-            border: 1px solid #e8e4d8; padding: 12px;
-            position: relative;
+            background: white; border-radius: 2px; overflow: visible; 
+            box-shadow: 3px 5px 15px rgba(0,0,0,0.1); 
+            display: flex; flex-direction: column; 
+            transition: all 0.4s; border: 1px solid #e8e4d8; 
+            padding: 12px; position: relative;
         }
-
-        /* 模擬日記傾斜感：奇數向左，偶數向右，3的倍數微斜 */
-        .food-card:nth-child(odd) { transform: rotate(-2deg); }
-        .food-card:nth-child(even) { transform: rotate(2deg); }
-        .food-card:nth-child(3n) { transform: rotate(1.5deg); }
         
-        .food-card:hover { 
-            transform: rotate(0deg) translateY(-10px) scale(1.02); 
-            z-index: 10; box-shadow: 0 15px 35px rgba(132, 100, 58, 0.2); 
+        /* 讓卡片隨機微傾斜 */
+        .food-card:nth-child(odd) { transform: rotate(2.5deg); }
+        .food-card:nth-child(even) { transform: rotate(-2.5deg); }
+        
+        .food-card:hover { transform: rotate(0deg) scale(1.05); z-index: 50; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+
+        .food-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #eee; }
+        .food-name { font-size: 19px; font-weight: bold; color: #5d4037; border-bottom: 1px dashed #d4a373; margin-top: 10px; padding-bottom: 5px; text-align: center; }
+        
+        /* 5. 說明文字對話框 (Hover效果) */
+        .food-tooltip {
+            position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%) scale(0);
+            background: #fffdf7; border: 2px solid #ffcc00; padding: 12px;
+            border-radius: 12px; width: 90%; font-size: 14px; color: #4a3e2e;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0; z-index: 200;
         }
-
-        .food-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 2px; border: 1px solid #eee; }
-        
-        .food-name { font-size: 19px; font-weight: bold; color: #5d4037; border-bottom: 1px dashed #d4a373; padding: 10px 0 5px 0; }
-        .food-intro { font-size: 14px; color: #7d6b5d; line-height: 1.6; padding-top: 10px; margin: 0; }
-        
-        /* 刪除按鈕：改成黃色調 */
-        .btn-delete-custom { 
-            background-color: #ffca28; /* 亮黃色 */
-            color: #5d4037; 
-            border: none; 
-            padding: 8px; 
-            margin-top: 15px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: background 0.3s, transform 0.2s;
-            font-size: 13px;
-            letter-spacing: 2px;
+        /* 氣泡小尖角 */
+        .food-tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            border-width: 8px 8px 0; border-style: solid; border-color: #ffcc00 transparent transparent;
         }
-        .btn-delete-custom:hover { background-color: #ffb300; transform: scale(0.95); }
+        .food-card:hover .food-tooltip { transform: translateX(-50%) scale(1); opacity: 1; }
 
-        /* 其他介面 */
-        .filter-box { margin-bottom: 30px; background: white; padding: 10px 25px; border-radius: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #d4a373; }
+        /* 6. 黃色刪除按鈕 */
+        .btn-delete { 
+            background-color: #ffcc00; color: #5d4037; border: none; 
+            cursor: pointer; font-size: 13px; font-weight: bold;
+            padding: 8px; border-radius: 5px; margin-top: 12px;
+            transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-delete:hover { background-color: #e6b800; transform: translateY(-2px); }
+        
+        /* 其他 UI */
+        .filter-box { margin-bottom: 30px; background: white; padding: 10px 25px; border-radius: 50px; border: 1px solid #d4a373; }
         .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 320px;}
         input, select, textarea { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .comment-section { width: 90%; max-width: 800px; margin: 50px 0 100px 0; background: #fffdf7; border: 1px solid #d4a373; padding: 30px; box-shadow: 8px 8px 0px #d4a373; position: relative; }
+        .comment-section { width: 90%; max-width: 800px; margin: 50px 0 100px 0; background: #fffdf7; border: 1px solid #d4a373; padding: 30px; }
     </style>
 </head>
 <body>
@@ -106,16 +107,14 @@
 
 <div class="gallery-container">
     <div class="gallery-item">
-        <div class="bubble">我不是應急食品？</div>
-        <img id="img1" src="https://via.placeholder.com/400x400?text=美食載入中">
+        <div class="bubble" style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); background: white; border: 1px solid #d4a373; padding: 5px 10px; border-radius: 10px; font-size: 12px; white-space: nowrap;">我不是應急食品？</div>
+        <img id="img1" src="https://via.placeholder.com/400x400?text=載入中...">
     </div>
     <div class="gallery-item">
-        <div class="bubble">今天也要好好吃飯喔！</div>
-        <img id="img2" src="https://via.placeholder.com/400x400?text=美食載入中">
+        <img id="img2" src="https://via.placeholder.com/400x400?text=載入中...">
     </div>
     <div class="gallery-item">
-        <div class="bubble">三彩糰子...好吃</div>
-        <img id="img3" src="https://via.placeholder.com/400x400?text=美食載入中">
+        <img id="img3" src="https://via.placeholder.com/400x400?text=載入中...">
     </div>
 </div>
 
@@ -130,7 +129,6 @@
 </div>
 
 <div class="form-container" id="adminForm">
-    <div style="font-size: 11px; color: #d4a373; margin-bottom: 10px;">💡 管理員模式：請填寫網址收錄美食</div>
     <input type="text" id="name" placeholder="料理名稱">
     <select id="category">
         <option value="主食">主食</option>
@@ -138,8 +136,8 @@
         <option value="點心">點心</option>
     </select>
     <textarea id="intro" placeholder="味道描述..."></textarea>
-    <input type="text" id="foodImageUrl" placeholder="圖片網址 (結尾需為 .jpg/png)">
-    <button id="addBtn" onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer; border-radius: 5px;">存入相簿</button>
+    <input type="text" id="foodImageUrl" placeholder="圖片網址">
+    <button id="addBtn" onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer; border-radius:5px;">存入札記</button>
 </div>
 
 <div id="displayArea"></div>
@@ -148,9 +146,9 @@
     <h3>📜 食客留書</h3>
     <div id="commentList"></div>
     <div style="margin-top: 20px; display:flex; gap:10px;">
-        <input type="text" id="commentUser" placeholder="尊姓大名">
-        <input type="text" id="commentContent" placeholder="想說的話...">
-        <button onclick="sendComment()" style="background:#84643a; color:white; border:none; padding:5px 15px; cursor:pointer; border-radius: 5px;">留言</button>
+        <input type="text" id="commentUser" placeholder="冒險者大名">
+        <input type="text" id="commentContent" placeholder="留言內容">
+        <button onclick="sendComment()" style="background:#84643a; color:white; border:none; padding:8px 15px; cursor:pointer; border-radius:5px;">送出留言</button>
     </div>
 </div>
 
@@ -183,7 +181,6 @@
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    // 載入大圖
     async function loadGallery() {
         try {
             const docSnap = await getDoc(doc(db, "settings", "gallery"));
@@ -197,7 +194,6 @@
     }
     loadGallery();
 
-    // 監聽美食
     let allFoods = [];
     onSnapshot(query(collection(db, "foods"), orderBy("createdAt", "desc")), (snapshot) => {
         allFoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -208,20 +204,19 @@
         const area = document.getElementById('displayArea');
         area.innerHTML = '';
         const list = filter === "全部" ? allFoods : allFoods.filter(f => f.category === filter);
-        
         list.forEach(f => {
             const card = document.createElement('div');
             card.className = 'food-card';
             card.innerHTML = `
+                <div class="food-tooltip">✨ <b>${f.name}</b><br>${f.intro || '尚未添加描述...'}</div>
                 <img src="${f.image}">
-                <div class="food-name">${f.name}</div>
-                <p class="food-intro">${f.intro}</p>`;
+                <div class="food-name">${f.name}</div>`;
             
             if (isAdmin) {
                 const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete-custom';
+                delBtn.className = 'btn-delete';
                 delBtn.innerText = '🗑️ 撕掉此頁';
-                delBtn.onclick = () => { if(confirm("確定要刪除這道美食嗎？")) deleteDoc(doc(db, "foods", f.id)); };
+                delBtn.onclick = () => { if(confirm("確定刪除這道料理嗎？")) deleteDoc(doc(db, "foods", f.id)); };
                 card.appendChild(delBtn);
             }
             area.appendChild(card);
@@ -231,24 +226,20 @@
     window.addFood = async () => {
         const name = document.getElementById('name').value;
         const imageUrl = document.getElementById('foodImageUrl').value;
-        if(!name || !imageUrl) return alert("名稱跟圖片都要填喔！");
+        if(!name || !imageUrl) return alert("請填寫名稱與網址！");
         await addDoc(collection(db, "foods"), {
             name, image: imageUrl, category: document.getElementById('category').value, 
             intro: document.getElementById('intro').value, createdAt: Date.now()
         });
-        alert("存檔成功！");
-        document.getElementById('name').value = '';
-        document.getElementById('foodImageUrl').value = '';
-        document.getElementById('intro').value = '';
+        alert("存入成功！");
     };
 
-    // 留言板
     onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
         const list = document.getElementById('commentList');
         list.innerHTML = '';
         snapshot.forEach(d => {
             const c = d.data();
-            list.innerHTML += `<div style="padding:10px 0; border-bottom:1px dashed #d4a373;">👤 <b>${c.user}</b>: ${c.content}</div>`;
+            list.innerHTML += `<div style="padding:10px 0; border-bottom:1px dashed #ddd;">👤 <b>${c.user}</b>: ${c.content}</div>`;
         });
     });
 
