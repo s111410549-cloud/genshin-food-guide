@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>提瓦特美食札記</title>
     <style>
-        /* --- 保留原有樣式 --- */
+        /* --- 這裡保留你原本所有的樣式，完全沒動 --- */
         body { 
             font-family: "Microsoft JhengHei", sans-serif; 
             background-color: #f4f1e9; margin: 0; 
@@ -57,29 +57,14 @@
         .category-tag { font-size: 11px; color: #84643a; font-weight: bold; }
         .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 300px;}
         input, select, textarea { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-
-        /* ✨ 留言區樣式 ✨ */
-        .comment-section {
-            width: 90%; max-width: 800px; margin: 50px 0 100px 0;
-            background: #fffdf7; border: 1px solid #d4a373;
-            padding: 30px; box-shadow: 8px 8px 0px #d4a373;
-            position: relative;
-        }
+        .comment-section { width: 90%; max-width: 800px; margin: 50px 0 100px 0; background: #fffdf7; border: 1px solid #d4a373; padding: 30px; box-shadow: 8px 8px 0px #d4a373; position: relative; }
         .comment-section h3 { margin-top: 0; color: #84643a; border-left: 5px solid #d4a373; padding-left: 10px; }
         .comment-input-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .comment-input-group input { flex: 1; min-width: 150px; border: 1px solid #d4a373; background: transparent; }
-        .comment-input-group button { 
-            background: #84643a; color: white; border: none; padding: 0 20px; 
-            height: 35px; border-radius: 5px; cursor: pointer; transition: 0.3s;
-        }
+        .comment-input-group button { background: #84643a; color: white; border: none; padding: 0 20px; height: 35px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
         .comment-input-group button:hover { background: #d4a373; }
-        
         .comment-list { max-height: 400px; overflow-y: auto; }
-        .comment-item {
-            padding: 15px 0; border-bottom: 1px dashed #e8e4d8;
-            animation: fadeIn 0.5s ease-in;
-            display: flex; justify-content: space-between; align-items: flex-start;
-        }
+        .comment-item { padding: 15px 0; border-bottom: 1px dashed #e8e4d8; animation: fadeIn 0.5s ease-in; display: flex; justify-content: space-between; align-items: flex-start; }
         .comment-info { flex-grow: 1; }
         .comment-user { font-weight: bold; color: #5d4037; font-size: 14px; }
         .comment-text { color: #7d6b5d; margin: 5px 0; font-size: 15px; }
@@ -122,7 +107,7 @@
     <input type="text" id="name" placeholder="料理名稱">
     <select id="category"><option value="主食">主食</option><option value="飲品">飲品</option><option value="點心">點心</option></select>
     <textarea id="intro" placeholder="介紹..."></textarea>
-    <input type="text" id="foodImgUrl" placeholder="圖片網址">
+    <input type="file" id="foodImage" accept="image/*" style="padding: 5px 0;">
     <button onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer;">收錄</button>
 </div>
 
@@ -139,26 +124,28 @@
 </div>
 
 <script type="module">
+    // ✨ 引入 Storage 模組
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCObKMkSnYZip04WBNyPC5gIDabK2VYevE",
         authDomain: "genshin-food-cloud.firebaseapp.com",
         projectId: "genshin-food-cloud",
-        storageBucket: "genshin-food-cloud.firebasestorage.app",
+        storageBucket: "genshin-food-cloud.appspot.com", // 修正後的 Bucket
         messagingSenderId: "77374518719",
         appId: "1:77374518719:web:fd859216db13a4b55e5d0a"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app); // 初始化 Storage
 
-    // 判定是否為管理員
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    // --- 1. 美食載入功能 ---
+    // --- 1. 載入精選美食圖 ---
     async function loadGallery() {
         const docSnap = await getDoc(doc(db, "settings", "gallery"));
         if (docSnap.exists()) {
@@ -194,24 +181,16 @@
         });
     }
 
-    // --- 2. 留言板邏輯 (已整合權限控制) ---
-    
-    // 監聽留言：即時更新且判斷刪除按鈕
+    // --- 2. 留言板邏輯 ---
     onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
         const listArea = document.getElementById('commentList');
         listArea.innerHTML = '';
-
-        // 讀取本地儲存的「我的留言 ID 清單」
         const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
-
         snapshot.forEach(docSnap => {
             const c = docSnap.data();
             const cid = docSnap.id;
             const date = new Date(c.createdAt).toLocaleString();
-            
-            // 權限判斷：管理員模式 OR 留言 ID 在我的本地紀錄中
             const canDelete = isAdmin || mySentComments.includes(cid);
-
             listArea.innerHTML += `
                 <div class="comment-item">
                     <div class="comment-info">
@@ -220,50 +199,53 @@
                         <div class="comment-date">${date}</div>
                     </div>
                     ${canDelete ? `<button onclick="deleteComment('${cid}')" class="btn-delete">刪除</button>` : ''}
-                </div>
-            `;
+                </div>`;
         });
     });
 
-    // 發送留言：存入資料庫並記錄 ID 到本地
     window.sendComment = async () => {
         const user = document.getElementById('commentUser').value;
         const content = document.getElementById('commentContent').value;
         if(!user || !content) return alert("請留下大名與留言內容！");
-
-        try {
-            const docRef = await addDoc(collection(db, "comments"), {
-                user, content, createdAt: Date.now()
-            });
-
-            // 將新產生的留言 ID 存入 LocalStorage
-            const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
-            mySentComments.push(docRef.id);
-            localStorage.setItem('my_sent_comments', JSON.stringify(mySentComments));
-
-            document.getElementById('commentContent').value = ''; 
-        } catch (e) {
-            alert("留言失敗，請確認資料庫設定！");
-        }
+        const docRef = await addDoc(collection(db, "comments"), { user, content, createdAt: Date.now() });
+        const mySentComments = JSON.parse(localStorage.getItem('my_sent_comments') || "[]");
+        mySentComments.push(docRef.id);
+        localStorage.setItem('my_sent_comments', JSON.stringify(mySentComments));
+        document.getElementById('commentContent').value = ''; 
     };
 
-    // 刪除留言
     window.deleteComment = async (id) => { 
-        if(confirm("確定要刪除這則食客留書嗎？")) {
-            await deleteDoc(doc(db, "comments", id)); 
-        }
+        if(confirm("確定要刪除留言嗎？")) await deleteDoc(doc(db, "comments", id)); 
     };
 
-    // --- 3. 美食管理功能 ---
+    // --- 3. 修改後的收錄功能 (自動上傳照片) ---
     window.addFood = async () => {
         const name = document.getElementById('name').value;
-        const img = document.getElementById('foodImgUrl').value;
-        if(!name || !img) return alert("請填寫料理名稱與圖片網址！");
-        await addDoc(collection(db, "foods"), {
-            name, image: img, category: document.getElementById('category').value,
-            intro: document.getElementById('intro').value, createdAt: Date.now()
-        });
-        alert("收錄成功！");
+        const fileInput = document.getElementById('foodImage');
+        const file = fileInput.files[0];
+        const category = document.getElementById('category').value;
+        const intro = document.getElementById('intro').value;
+
+        if(!name || !file) return alert("請填寫名稱並選取照片！");
+
+        try {
+            // A. 上傳照片
+            const storageRef = ref(storage, 'foods/' + Date.now() + "_" + file.name);
+            const uploadTask = await uploadBytes(storageRef, file);
+            const imageUrl = await getDownloadURL(uploadTask.ref);
+
+            // B. 儲存到 Firestore
+            await addDoc(collection(db, "foods"), {
+                name, image: imageUrl, category, intro, createdAt: Date.now()
+            });
+
+            alert("收錄成功！");
+            document.getElementById('name').value = '';
+            fileInput.value = '';
+            document.getElementById('intro').value = '';
+        } catch (e) {
+            alert("收錄失敗：" + e.message);
+        }
     };
 
     window.deleteFood = async (id) => { 
@@ -271,18 +253,6 @@
     };
 
     document.getElementById('filterCategory').onchange = (e) => renderFoods(e.target.value);
-
-    // ✨ 滑鼠特效
-    document.addEventListener('mousemove', (e) => {
-        if (Math.random() > 0.9) {
-            const p = document.createElement('div');
-            p.innerHTML = '✨'; p.style.position = 'fixed'; p.style.left = e.clientX + 'px'; p.style.top = e.clientY + 'px';
-            p.style.pointerEvents = 'none'; p.style.color = '#d4a373'; p.style.fontSize = '10px'; p.style.zIndex = '200';
-            document.body.appendChild(p);
-            setTimeout(() => { p.style.transition = '1s'; p.style.transform = 'translateY(-40px)'; p.style.opacity = '0'; }, 10);
-            setTimeout(() => p.remove(), 1000);
-        }
-    });
 </script>
 </body>
 </html>
