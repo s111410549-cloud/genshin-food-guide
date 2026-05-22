@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>提瓦特美食札記</title>
     <style>
+        /* 原有的美化樣式與餐具游標 */
         body { 
             font-family: "Microsoft JhengHei", sans-serif; 
             background-color: #f4f1e9; margin: 0; 
@@ -11,8 +12,28 @@
             background-image: radial-gradient(#d4a373 0.5px, transparent 0.5px);
             background-size: 24px 24px;
             overflow-x: hidden;
+            /* 餐具游標 */
+            cursor: url('https://cur.cursors-4u.net/food/foo-7/foo668.cur'), auto;
         }
+
         header { padding: 40px 0 20px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #84643a; }
+        
+        /* 星星特效樣式 */
+        .star {
+            position: absolute;
+            background-color: #ffcc00;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 10px #ffcc00;
+            animation: fadeOut 1s linear forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0); }
+        }
+
         .gallery-container { display: flex; justify-content: center; gap: 30px; padding: 40px 0; }
         .gallery-item { 
             position: relative; background: white; padding: 10px 10px 35px 10px;
@@ -25,6 +46,7 @@
         .gallery-item:nth-child(3) { transform: rotate(-2deg); }
         .gallery-item:hover { transform: scale(1.1) rotate(0deg); z-index: 100; }
         .gallery-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+        
         .bubble {
             position: absolute; top: -40px; left: 50%; transform: translateX(-50%) scale(0.8);
             background: #fffdf7; border: 1.5px solid #d4a373; padding: 8px 15px;
@@ -38,28 +60,25 @@
             border-style: solid; border-color: #d4a373 transparent transparent;
         }
         .gallery-item:hover .bubble { opacity: 1; top: -60px; transform: translateX(-50%) scale(1); }
+
         .filter-box { margin-bottom: 30px; background: white; padding: 10px 25px; border-radius: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #d4a373; }
         #displayArea { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 40px; width: 90%; max-width: 1100px; padding-bottom: 50px; }
+        
         .food-card { background: white; border-radius: 5px; overflow: hidden; box-shadow: 2px 5px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; transition: all 0.5s; border: 1px solid #e8e4d8; padding: 12px 12px 0 12px; }
         .food-card:hover { transform: rotate(0deg) translateY(-10px); z-index: 10; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
         .food-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; }
+        
         .food-content { padding: 15px 5px; max-height: 50px; transition: max-height 0.5s; overflow: hidden; background: white; }
         .food-card:hover .food-content { max-height: 300px; }
         .food-name { font-size: 18px; font-weight: bold; color: #5d4037; border-bottom: 1px dashed #d4a373; padding-bottom: 5px; }
         .food-intro { font-size: 14px; color: #7d6b5d; line-height: 1.6; padding-top: 10px; margin: 0; opacity: 0; transition: 0.3s; }
         .food-card:hover .food-intro { opacity: 1; }
-        .category-tag { font-size: 11px; color: #84643a; font-weight: bold; }
+        
         .form-container { display: none; background: white; padding: 25px; border-radius: 15px; border: 2px dashed #d4a373; margin-bottom: 40px; width: 320px;}
         input, select, textarea { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        
         .comment-section { width: 90%; max-width: 800px; margin: 50px 0 100px 0; background: #fffdf7; border: 1px solid #d4a373; padding: 30px; box-shadow: 8px 8px 0px #d4a373; position: relative; }
-        .comment-section h3 { margin-top: 0; color: #84643a; border-left: 5px solid #d4a373; padding-left: 10px; }
-        .comment-input-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .comment-input-group input { flex: 1; min-width: 150px; border: 1px solid #d4a373; background: transparent; }
-        .comment-input-group button { background: #84643a; color: white; border: none; padding: 0 20px; height: 35px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
-        .comment-list { max-height: 400px; overflow-y: auto; }
-        .comment-item { padding: 15px 0; border-bottom: 1px dashed #e8e4d8; display: flex; justify-content: space-between; align-items: flex-start; }
         .btn-delete { color: #e57373; border: 1px solid #e57373; background: none; cursor: pointer; font-size: 10px; padding: 2px 5px; border-radius: 3px; margin-left: 10px; }
-        .storage-hint { font-size: 11px; color: #d4a373; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -92,7 +111,7 @@
 </div>
 
 <div class="form-container" id="adminForm">
-    <div class="storage-hint">💡 請貼上圖片網址 (結尾須為 .jpg/png)</div>
+    <div style="font-size: 11px; color: #d4a373; margin-bottom: 10px;">💡 請貼上圖片網址</div>
     <input type="text" id="name" placeholder="料理名稱">
     <select id="category">
         <option value="主食">主食</option>
@@ -100,7 +119,7 @@
         <option value="點心">點心</option>
     </select>
     <textarea id="intro" placeholder="介紹..."></textarea>
-    <input type="text" id="foodImageUrl" placeholder="圖片網址 (結尾為 .jpg/png)">
+    <input type="text" id="foodImageUrl" placeholder="圖片網址 (結尾 .jpg/png)">
     <button id="addBtn" onclick="addFood()" style="width:100%; background:#84643a; color:white; border:none; padding:10px; cursor:pointer;">收錄</button>
 </div>
 
@@ -108,12 +127,12 @@
 
 <div class="comment-section">
     <h3>📜 食客留書</h3>
-    <div class="comment-input-group">
-        <input type="text" id="commentUser" placeholder="冒險者大名">
-        <input type="text" id="commentContent" placeholder="想說的話...">
-        <button id="commentBtn" onclick="sendComment()">留言</button>
+    <div id="commentList"></div>
+    <div style="margin-top: 20px; display:flex; gap:10px;">
+        <input type="text" id="commentUser" placeholder="大名">
+        <input type="text" id="commentContent" placeholder="內容">
+        <button onclick="sendComment()" style="background:#84643a; color:white; border:none; padding:5px 15px; cursor:pointer;">留言</button>
     </div>
-    <div id="commentList" class="comment-list"></div>
 </div>
 
 <script type="module">
@@ -132,10 +151,20 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // --- 星星特效 JS ---
+    document.addEventListener('mousemove', function(e) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = e.pageX + 'px';
+        star.style.top = e.pageY + 'px';
+        document.body.appendChild(star);
+        setTimeout(() => star.remove(), 1000);
+    });
+
     const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
     if (isAdmin) document.getElementById('adminForm').style.display = 'block';
 
-    // === 【修復】原本的插圖不見了？因為我漏加了這一段 ===
+    // 載入精選插圖
     async function loadGallery() {
         try {
             const docSnap = await getDoc(doc(db, "settings", "gallery"));
@@ -145,11 +174,11 @@
                 if(data.url2) document.getElementById('img2').src = data.url2;
                 if(data.url3) document.getElementById('img3').src = data.url3;
             }
-        } catch (e) { console.error("Gallery Error:", e); }
+        } catch (e) { console.error(e); }
     }
-    loadGallery(); // === 執行載入插圖 ===
+    loadGallery();
 
-    // --- 數據監聽渲染 ---
+    // 監聽數據
     let allFoods = [];
     onSnapshot(query(collection(db, "foods"), orderBy("createdAt", "desc")), (snapshot) => {
         allFoods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -164,73 +193,48 @@
             const card = document.createElement('div');
             card.className = 'food-card';
             card.innerHTML = `
-                <img src="${f.image}" onerror="this.src='https://via.placeholder.com/300x200?text=圖片失效'">
+                <img src="${f.image}">
                 <div class="food-content">
-                    <span class="category-tag"># ${f.category}</span>
                     <div class="food-name">${f.name}</div>
                     <p class="food-intro">${f.intro}</p>
                 </div>`;
             if (isAdmin) {
                 const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete';
-                delBtn.innerText = '[撕掉此頁]';
-                delBtn.onclick = () => deleteFood(f.id);
-                card.querySelector('.food-content').appendChild(delBtn);
+                delBtn.innerText = '刪除';
+                delBtn.onclick = () => deleteDoc(doc(db, "foods", f.id));
+                card.appendChild(delBtn);
             }
             area.appendChild(card);
         });
     }
 
-    // --- 核心功能 (繞過 Storage 版本) ---
     window.addFood = async () => {
         const name = document.getElementById('name').value;
         const imageUrl = document.getElementById('foodImageUrl').value;
-        const category = document.getElementById('category').value;
-        const intro = document.getElementById('intro').value;
-
-        if(!name || !imageUrl) return alert("請填寫名稱並貼上圖片網址！");
-
-        const btn = document.getElementById('addBtn');
-        btn.disabled = true;
-        btn.innerText = "寫入中...";
-
-        try {
-            await addDoc(collection(db, "foods"), {
-                name, image: imageUrl, category, intro, createdAt: Date.now()
-            });
-            alert("收錄成功！");
-            document.getElementById('foodImageUrl').value = '';
-        } catch (e) {
-            alert("錯誤：" + e.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "收錄";
-        }
+        if(!name || !imageUrl) return alert("請填寫名稱與網址！");
+        await addDoc(collection(db, "foods"), {
+            name, image: imageUrl, category: document.getElementById('category').value, 
+            intro: document.getElementById('intro').value, createdAt: Date.now()
+        });
+        alert("存入成功！");
     };
 
-    // --- 留言板 ---
     onSnapshot(query(collection(db, "comments"), orderBy("createdAt", "desc")), (snapshot) => {
-        const listArea = document.getElementById('commentList');
-        listArea.innerHTML = '';
-        snapshot.forEach(docSnap => {
-            const c = docSnap.data();
-            const item = document.createElement('div');
-            item.className = 'comment-item';
-            item.innerHTML = `<div>👤 <b>${c.user}</b>: ${c.content}</div>`;
-            listArea.appendChild(item);
+        const list = document.getElementById('commentList');
+        list.innerHTML = '';
+        snapshot.forEach(d => {
+            const c = d.data();
+            list.innerHTML += `<div style="padding:10px 0; border-bottom:1px dashed #ddd;">👤 <b>${c.user}</b>: ${c.content}</div>`;
         });
     });
 
     window.sendComment = async () => {
-        const user = document.getElementById('commentUser').value;
-        const content = document.getElementById('commentContent').value;
-        if(!user || !content) return alert("請填寫大名與留言！");
-        await addDoc(collection(db, "comments"), { user, content, createdAt: Date.now() });
-        document.getElementById('commentContent').value = '';
-    };
-
-    window.deleteFood = async (id) => { 
-        if(confirm("確定撕掉這一頁嗎？")) await deleteDoc(doc(db, "foods", id)); 
+        const u = document.getElementById('commentUser').value;
+        const c = document.getElementById('commentContent').value;
+        if(u && c) {
+            await addDoc(collection(db, "comments"), { user: u, content: c, createdAt: Date.now() });
+            document.getElementById('commentContent').value = '';
+        }
     };
 
     document.getElementById('filterCategory').onchange = (e) => renderFoods(e.target.value);
